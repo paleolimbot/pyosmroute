@@ -5,3 +5,5 @@
 .Rhistory
 *_osmsegs.csv
 *_osmpoints.csv
+rosm.cache
+testmatch.pdf

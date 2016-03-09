@@ -97,5 +97,3 @@ if __name__ == "__main__":
 
     if args.output:
         summary.to_csv(args.output)
-    else:
-        print(summary.iloc[:, ("_csv_file", "result")])

@@ -1,0 +1,25 @@
+---
+output: 
+  pdf_document: 
+    fig_crop: no
+fontsize: 11pt
+geometry: margin=0.5in
+---
+
+
+```{r, echo=FALSE}
+source("testmatch.R")
+```
+
+```{r, results='asis', echo=FALSE, fig.align="center", dpi=800}
+# run all data
+folder <- "example-data/test"
+trips <- list.files(folder, pattern="*.csv", full.names = TRUE)
+
+for(trip in trips) {
+  matchtrip(trip, printoutput = TRUE)
+  # browser()
+  cat("\\newpage\n\n")
+}
+```
+
