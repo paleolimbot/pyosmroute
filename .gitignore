@@ -3,3 +3,5 @@
 .Rproj.user
 .RData
 .Rhistory
+*_osmsegs.csv
+*_osmpoints.csv

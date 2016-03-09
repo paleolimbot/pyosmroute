@@ -369,4 +369,5 @@ def read_csv(reader, driver=None, headers=True, skiprows=0, numeric=True):
                 records.append([c for c in line])
     if fname:
         reader.close()
-    return DataFrame.from_records(records, columns=columns)
+
+    return DataFrame.from_records(records) if columns is None else DataFrame.from_records(records, columns=columns)
