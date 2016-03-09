@@ -40,7 +40,7 @@ def _rotationbyrow(row1, row2, bearing_col="_bearing", datetime_col="_datetime")
 
 
 def datetimes(df, unparsed_col=0):
-    return [_parsetime(df.iloc[i, unparsed_col]) for i in range(len(df))]
+    return [_parsetime(df.iloc[i][unparsed_col]) for i in range(len(df))]
 
 
 def velocities(df, nwindow=2, datetime_col="_datetime", lon_col="Longitude", lat_col="Latitude"):
