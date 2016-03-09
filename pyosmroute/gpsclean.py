@@ -90,7 +90,7 @@ def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recur
     # check first point
     if 1 in badpoints:
         # check velocity from 1 to 2
-        vel = _velbyrow(indf.iloc[1], indf.iloc[2])
+        vel = _velbyrow(indf.iloc[1], indf.iloc[2], lat_col=lat_column, lon_col=lon_column)
         if vel < max_velocity:
             # 1 was added because 0 was the bad point
             badpoints.remove(1)
