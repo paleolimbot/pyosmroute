@@ -30,7 +30,7 @@ def matchcsv(csvfiles, matchargs, dbargs=None, outpoints=False, outsegs=False):
                     segs.to_csv(csvfile[:-4] + "_osmsegs.csv")
             except Exception as e:
                 pyosm.log("Could not process trip %s: %s" % (csvfile, e), stacktrace=True)
-                allstats.append({'_csv_file': csvfile, 'result': str(e)})
+                allstats.append({'_csv_file': csvfile, 'result': type(e).__name__})
     db.disconnect() # already taken care of by context manager, but might as well
     return allstats
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
                     csvfiles.append(os.path.join(args.infile, file))
 
     else:
-        pyosm.log("%s is not a file or directory" % args.tripdir)
+        pyosm.log("%s is not a file or directory" % args.infile)
         sys.exit(1)
 
     if not csvfiles:
@@ -97,5 +97,3 @@ if __name__ == "__main__":
 
     if args.output:
         summary.to_csv(args.output)
-    elif args.verbose:
-        print(summary)

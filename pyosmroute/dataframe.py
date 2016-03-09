@@ -355,9 +355,9 @@ def read_csv(reader, driver=None, headers=True, skiprows=0, numeric=True):
                     columns = line
                 else:
                     if numeric:
-                        records.append([[_asnumeric(c),] for c in line])
+                        records.append([_asnumeric(c) for c in line])
                     else:
-                        records.append([[c,] for c in line])
+                        records.append(line)
             else:
                 # no data
                 continue
@@ -366,7 +366,7 @@ def read_csv(reader, driver=None, headers=True, skiprows=0, numeric=True):
             if numeric:
                 records.append([_asnumeric(c) for c in line])
             else:
-                records.append([c for c in line])
+                records.append(line)
     if fname:
         reader.close()
 

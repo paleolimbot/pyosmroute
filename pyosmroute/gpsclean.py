@@ -99,11 +99,11 @@ def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recur
     # find points that violate the min_distance
     lowdistpoints = []
     if min_distance:
-        pt = (indf.Longitude[0], indf.Latitude[0])
+        pt = (indf[lon_column][0], indf[lat_column][0])
         for i in range(1, len(indf)):
             if i in badpoints:
                 continue
-            newpt = (indf.Longitude[i], indf.Latitude[i])
+            newpt = (indf[lon_column][i], indf[lat_column][i])
             if geodist(pt, newpt) <= min_distance:
                 lowdistpoints.append(i)
             else:
@@ -123,7 +123,7 @@ def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recur
             return cleanpoints(newdf, min_velocity=min_velocity / 1.5 if min_velocity is not None else None,
                                max_velocity=max_velocity,
                                min_distance=None,
-                               recursion_limit=recursion_limit - 1)
+                               recursion_limit=recursion_limit - 1, lat_column=lat_column, lon_column=lon_column)
         else:
             return newdf
     else:
