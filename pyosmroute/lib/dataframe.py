@@ -330,7 +330,6 @@ class DataFrame(object):
             raise NotImplementedError("Driver other than csv is not yet supported.")
 
         csvreader = csv.reader(reader)
-        df = None
         records = []
         columns = None
         for line in csvreader:

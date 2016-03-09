@@ -7,7 +7,7 @@ ERROR = "error"
 MESSAGE = "message"
 
 
-def config():
+def config_logger():
     global __is_configured
     logging.basicConfig(level=logging.DEBUG)
     __is_configured = True
@@ -15,7 +15,7 @@ def config():
 
 def log(message, level=DEBUG, stacktrace=False):
     if not __is_configured:
-        config()
+        config_logger()
     if stacktrace:
         logging.exception(message)
     else:
