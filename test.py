@@ -8,7 +8,7 @@ def test_match(db):
 
     pyosm.log("Reading trip %s" % file)
     gps = pyosm.read_csv(file, skiprows=1)
-
+    pyosm.osmmatch(db, gps, lat_column=1, lon_column=2, unparsed_datetime_col=0) # test parameterization of columns
     stats, points, segs = pyosm.osmmatch(db, gps)
     if points:
         # points.write("OSMPoints.csv")

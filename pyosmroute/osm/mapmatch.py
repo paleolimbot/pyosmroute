@@ -19,7 +19,8 @@ def nearest_road(db, *points, radius=15):
     return allres[0] if len(allres) == 1 else allres
 
 
-def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, beta=10.0, maxiter=1,
+def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_datetime_col=0,
+             searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, beta=10.0, maxiter=1,
              minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=1,
              lazy_probabilities=True, points_summary=True, segments_summary=True):
     # maxvel used to discard improbable routes when calculating driving distance between two points
@@ -37,13 +38,16 @@ def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, be
     gpsdf["_original_index"] = [i for i in range(len(gpsdf))]
 
     log("Cleaning data...")
-    cleaned = gpsclean.cleanpoints(gpsdf, min_distance=minpointdistance, min_velocity=None)
+    if "_datetime" not in gpsdf:
+        gpsdf["_datetime"] = gpsclean.datetimes(gpsdf, unparsed_col=unparsed_datetime_col)
+    cleaned = gpsclean.cleanpoints(gpsdf, min_distance=minpointdistance, min_velocity=None, lat_column=lat_column,
+                                   lon_column=lon_column)
 
     log("Calculating velocities and directions...")
-    cleaned["_velocity"] = gpsclean.velocities(cleaned, nwindow=paramter_window)
-    cleaned["_bearing"] = gpsclean.bearings(cleaned, nwindow=paramter_window)
+    cleaned["_velocity"] = gpsclean.velocities(cleaned, nwindow=paramter_window, lat_col=lat_column, lon_col=lon_column)
+    cleaned["_bearing"] = gpsclean.bearings(cleaned, nwindow=paramter_window, lat_col=lat_column, lon_col=lon_column)
     cleaned["_rotation"] = gpsclean.rotations(cleaned, nwindow=paramter_window)
-    cleaned["_distance"] = gpsclean.distances(cleaned)
+    cleaned["_distance"] = gpsclean.distances(cleaned, lat_col=lat_column, lon_col=lon_column)
 
     if len(cleaned) < minpoints:
         log("Too few points to perform matching (%s)" % len(gpsdf))
@@ -53,7 +57,7 @@ def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, be
     gpspoints = [cleaned.iloc[i] for i in range(len(cleaned))]
 
     log("Fetching all possible ways within radius %s..." % searchradius)
-    ways = [DataFrame(wayid=db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius)) for p in gpspoints]
+    ways = [DataFrame(wayid=db.nearest_ways(p[lon_column], p[lat_column], radius=searchradius)) for p in gpspoints]
 
     log("Building in-memory cache...")
     cache = OSMCache(db)
@@ -67,7 +71,7 @@ def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, be
     states = []
     for t, waydf in enumerate(ways):
         ptdict = gpspoints[t]
-        segs = [cache.get_segment(wayid, (ptdict["Longitude"], ptdict["Latitude"]))
+        segs = [cache.get_segment(wayid, (ptdict[lon_column], ptdict[lat_column]))
                 for wayid in waydf["wayid"]]
         states.append(segs)
         eprobs.append([emission_probability(seg, ptdict, sigmaZ=sigmaZ, bearing_penalty_weight=bearing_penalty_weight)

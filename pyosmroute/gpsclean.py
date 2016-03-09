@@ -72,7 +72,8 @@ def rotations(df, force=True, nwindow=2):
             for i in range(len(df))]
 
 
-def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recursion_limit=100):
+def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recursion_limit=100, lat_column="Latitude",
+                lon_column="Longitude"):
     # if less than 3 rows, return
     if len(indf) < 3:
         return indf
@@ -80,7 +81,7 @@ def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recur
     # calculate velocities
     if "_datetime" not in indf:
         indf["_datetime"] = datetimes(indf)
-    indf["_velocity"] = velocities(indf, nwindow=2)
+    indf["_velocity"] = velocities(indf, nwindow=2, lat_col=lat_column, lon_col=lon_column)
     # test threshold and 0.0 velocity (same point repeated)
     highpoints = list(np.where(indf._velocity[1:] > max_velocity)[0] + 1) if max_velocity is not None else []
     lowpoints = list(np.where(indf._velocity[1:] <= min_velocity)[0] + 1) if min_velocity is not None else []
