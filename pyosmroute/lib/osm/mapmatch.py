@@ -6,7 +6,6 @@ from ..logger import log
 from ..dataframe import DataFrame
 from .. import gpsclean
 
-from .planetdb import PlanetDB
 from ._probabilities import emission_probability, get_lazy, get_all
 from ._osmcache import OSMCache
 from ._hiddenmarkovmodel import HiddenMarkovModel
@@ -173,7 +172,7 @@ def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, be
         for t, seg in enumerate(pathsegs):
             seg["missingnodes"] = nodes[t]
             seg["gps__original_index"] = int(cleaned["_original_index"][t])
-        summary = DataFrame.flatten(pathsegs, keys=("gps__original_index", "wayid", "segment",
+        summary = DataFrame.from_dict_list(pathsegs, keys=("gps__original_index", "wayid", "segment",
                                                     "node1", "node2", "missingnodes"))
         tripsummary = DataFrame()  # makes output types at least consistent
 
@@ -192,7 +191,7 @@ def _points_summary(cache, gpspoints, pathsegs):
 
     keys.remove("pt")
 
-    summary = DataFrame.flatten(pathsegs, keys=keys)
+    summary = DataFrame.from_dict_list(pathsegs, keys=keys)
     summary["p1_lon"], summary["p1_lat"] = zip(*summary["p1"])
     summary["p2_lon"], summary["p2_lat"] = zip(*summary["p2"])
     summary["pt_onseg_lon"], summary["pt_onseg_lat"] = zip(*summary["pt_onseg"])
@@ -200,12 +199,12 @@ def _points_summary(cache, gpspoints, pathsegs):
     del summary["p2"]
     del summary["pt_onseg"]
 
-    gpssummary = DataFrame.flatten(gpspoints, keys=gpskeys)
+    gpssummary = DataFrame.from_dict_list(gpspoints, keys=gpskeys)
     for col in gpssummary:
         summary["gps_" + col] = gpssummary[col]
     summary["gps__original_index"] = summary["gps__original_index"].astype(int)
 
-    waytags = DataFrame.flatten([cache.ways[wayid]["tags"] for wayid in summary["wayid"]], no_value="")
+    waytags = DataFrame.from_dict_list([cache.ways[wayid]["tags"] for wayid in summary["wayid"]], no_value="")
     for tagname in waytags:
         summary["waytag_" + tagname] = waytags[tagname]
 
@@ -229,7 +228,7 @@ def _segment_summary(cache, pathsegs, nodes):
 
     keys = ("wayid", "segment", "node1", "node2", "typetag", "name", "distance", "bearing",
             "p1", "p2")
-    tripsummary = DataFrame.flatten(allsegs, keys=keys)
+    tripsummary = DataFrame.from_dict_list(allsegs, keys=keys)
     tripsummary["p1_lon"], tripsummary["p1_lat"] = zip(*tripsummary["p1"])
     tripsummary["p2_lon"], tripsummary["p2_lat"] = zip(*tripsummary["p2"])
     del tripsummary["p1"]
@@ -270,11 +269,11 @@ def _segment_summary(cache, pathsegs, nodes):
     tripsummary["direction"] = direction
 
     # flatten nodetags and waytags, much easier to do here than in R
-    nodetags = DataFrame.flatten(nodetags, "")
+    nodetags = DataFrame.from_dict_list(nodetags, "")
     for tagname in nodetags:
         tripsummary["nodetag_" + tagname] = nodetags[tagname]
 
-    waytags = DataFrame.flatten([cache.ways[wayid]["tags"] for wayid in tripsummary["wayid"]], no_value="")
+    waytags = DataFrame.from_dict_list([cache.ways[wayid]["tags"] for wayid in tripsummary["wayid"]], no_value="")
     for tagname in waytags:
         tripsummary["waytag_" + tagname] = waytags[tagname]
 
@@ -294,36 +293,3 @@ def _summary_statistics(df, output=None, **stats):
        output[name] = stat[0](df[stat[1]])
     return output
 
-if __name__ == "__main__":
-    from dbconfig import DB_NAME, DB_PASSWORD, DB_USER, DB_HOST
-    import sys
-    import os
-
-    folder = sys.argv[1] if len(sys.argv) >= 2 else \
-        "../../../../match-testing/2016-03-03 09_58_20_Car - Normal Drive_Android/"
-    #
-    #   "../../../../example-data/ChinaTrips_v2/trip_sensor_41b705b6-a44f-4da2-a54b-f81c51fabb80"
-    #   "../../../../example-data/ChinaTrips_v2/trip_sensor_3d0a013f-06b4-48ef-8793-10a081429691"
-    # "../../../../example-data/ChinaTrips_v2/trip_sensor_cf82d034-f6ca-403b-a315-aad73e88ee0c"
-    # ""
-    #
-
-    log("Reading trip %s" % folder)
-    if folder.endswith(".csv"):  # manually convert Chris' non-standard RawGPS.csv files
-        gps = DataFrame.read(os.path.join(folder, "RawGPS.csv"), headers=False, skiprows=1)
-        gps["Latitude"] = gps[1]
-        gps["Longitude"] = gps[2]
-    else:
-        gps = DataFrame.read(os.path.join(folder, "RawGPS.csv"), skiprows=1)
-
-    osmdb = PlanetDB(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
-    osmdb.connect()
-    try:
-        stats, points, segs = osmmatch(osmdb, gps)
-        if points:
-            points.write(os.path.join(folder, "OSMPoints.csv"))
-            segs.write(os.path.join(folder, "OSMSegments.csv"))
-            print(stats)
-    except:
-        log("Error executing test!", stacktrace=True)
-    osmdb.disconnect()

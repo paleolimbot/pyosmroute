@@ -82,6 +82,7 @@ def along_track_distance(p1, p2, p3, ellipsoid=None):
     angle = abs(bearing_difference(bearing_to(p1, p2), bearing_to(p1, p3)))
     return result if angle <= 90 else -result
 
+
 if __name__ == "__main__":
     # test
     p1 = (-64.36449, 45.09123)  # wolfville

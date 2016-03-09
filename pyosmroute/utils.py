@@ -17,10 +17,7 @@ def get_planet_db(db_host=None, db_user=None, db_password=None, db_name=None):
 
 
 def on_road_percent(db, gpsdf, radius=15, latitude_column="Latitude", longitude_column="Longitude"):
-        res = np.array([mapmatch.nearest_road(db, (gpsdf.iloc[i, longitude_column], gpsdf.iloc[i, latitude_column]),
+        res = np.array([mapmatch.nearest_road(db, (gpsdf[longitude_column][i], gpsdf[latitude_column][i]),
                                               radius=radius) is not None
                        for i in range(len(gpsdf))])
         return res.sum() / len(gpsdf)
-
-def read_csv(reader, driver=None, headers=True, skiprows=0, numeric=True):
-    return dataframe.DataFrame.read(reader, driver=driver, headers=headers, skiprows=skiprows, numeric=numeric)

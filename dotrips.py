@@ -94,4 +94,4 @@ if __name__ == "__main__":
         summary = TripFolder.summary(*list(map(process_trip, *zip(*processargs))))
 
     if args.output:
-        summary.write(args.output)
+        summary.to_csv(args.output)

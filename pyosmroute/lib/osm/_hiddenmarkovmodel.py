@@ -14,6 +14,7 @@ def _coorditer(numpyarray):
         except StopIteration:
             break
 
+
 class HiddenMarkovModel(object):
     """
     A pure python implementation of a Hidden Markov Model to find the most likely

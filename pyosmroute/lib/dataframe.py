@@ -254,7 +254,7 @@ class DataFrame(object):
     def __repr__(self, sep="\t"):
         return "\n".join(sep.join(str(cell) for cell in row) for row in self.itertuples(header=True, rownames=False))
 
-    def write(self, writer, driver=None, mode="w"):
+    def to_csv(self, writer, driver=None, mode="w"):
         fname = None
         if "write" in dir(writer):
             # is an open file object
@@ -303,64 +303,9 @@ class DataFrame(object):
     def from_records(data, columns=None):
         return DataFrame(*zip(*data)) if columns is None else DataFrame(*zip(*data), columns=columns)
 
-    @staticmethod
-    def read(reader, driver=None, headers=True, skiprows=0, numeric=True):
-        fname = None
-        if "readline" in dir(reader):
-            # is an open file object
-            if driver is None:
-                raise ValueError("Must specify driver of 'csv', 'tsv', or 'json'")
-        else:
-            # is a filename
-            if not isinstance(reader, str):
-                raise ValueError("Reader paramter is not an open file or a filename")
-            fname = reader
-            if driver is None:
-                # autodetect from ext
-                ext = reader[fname.rfind("."):]
-                if len(ext) > 1:
-                    driver = ext[1:]
-                else:
-                    raise ValueError("Invalid extension provided, cannot autodetect out driver")
-            reader = open(fname, "r")
-
-        if driver != "csv":
-            if fname:
-                reader.close()
-            raise NotImplementedError("Driver other than csv is not yet supported.")
-
-        csvreader = csv.reader(reader)
-        records = []
-        columns = None
-        for line in csvreader:
-            if skiprows > 0:
-                skiprows -= 1
-                continue
-            if not records and not columns:
-                # look for data
-                if any([bool(c) for c in line]):
-                    if headers:
-                        columns = line
-                    else:
-                        if numeric:
-                            records.append([[_asnumeric(c),] for c in line])
-                        else:
-                            records.append([[c,] for c in line])
-                else:
-                    # no data
-                    continue
-            else:
-                # already a df
-                if numeric:
-                    records.append([_asnumeric(c) for c in line])
-                else:
-                    records.append([c for c in line])
-        if fname:
-            reader.close()
-        return DataFrame.from_records(records, columns=columns)
 
     @staticmethod
-    def flatten(list_of_dicts, no_value=float('nan'), keys=None):
+    def from_dict_list(list_of_dicts, no_value=float('nan'), keys=None):
         if keys is None:
             keys = set()
             for dict in list_of_dicts:
@@ -370,51 +315,58 @@ class DataFrame(object):
             df[key] = [d[key] if key in d else no_value for d in list_of_dicts]
         return df
 
-if __name__ == "__main__":
-    # test
-    import os
 
-    a = DataFrame([1, 2, 3], ["one", "two", "three"], ["data1", "data2", "data3"])
-    b = DataFrame([], [], [], columns=["Column1", "Column2", "Column3"])
-    print(a[0])
-    print(a[1])
-    print(a.columns())
-    print(b[0])
-    print(b[1])
-    print(b.Column1)
-    print(b.Column2)
-    print(len(b))
-    print(b.ncol())
-    # a.newcol = [1.23, 4.44, 9.19] #this does not add 'newcol' to columns, and does not work. use [] for assigning
-    a["newcol"] = [1.23, 4.44, 9.19]
-    b["newcol"] = [] #like this
-    b.append(1,2,3, newcol="bananas")
-    a.append([4, 5], ["four", "five"], ["data4", "data5"], newcol=[13, 10])
-    print(a)
-    print(b)
-    with open("fish", "w") as f:
-        a.write(f, driver="csv")
-    a.write("fish", driver="tsv")
-    b.write("fish.csv")
-    b.write("fish.csv", mode="a")
-    c = DataFrame.read("fish.csv")
-    print(c)
-    d = DataFrame.read("fish.csv", headers=False)
-    print(d)
+def read_csv(reader, driver=None, headers=True, skiprows=0, numeric=True):
+    fname = None
+    if "readline" in dir(reader):
+        # is an open file object
+        if driver is None:
+            raise ValueError("Must specify driver of 'csv', 'tsv', or 'json'")
+    else:
+        # is a filename
+        if not isinstance(reader, str):
+            raise ValueError("Reader paramter is not an open file or a filename")
+        fname = reader
+        if driver is None:
+            # autodetect from ext
+            ext = reader[fname.rfind("."):]
+            if len(ext) > 1:
+                driver = ext[1:]
+            else:
+                raise ValueError("Invalid extension provided, cannot autodetect out driver")
+        reader = open(fname, "r")
 
-    with open("fish.csv") as f:
-        e = DataFrame.read(f, driver="csv")
-        print(e)
+    if driver != "csv":
+        if fname:
+            reader.close()
+        raise NotImplementedError("Driver other than csv is not yet supported.")
 
-    a = DataFrame([1,2], columns=["fish",])
-    a["fish"] = ["one", "two"]
-    print(a)
-    print("-----")
-    # print(b.rowasdict(0))
-    print(a.iloc[0])  # should be the same
-    print(a.iloc[0, :])  # should be the same except as data frame
-
-    print(b.copy())
-
-    os.unlink("fish")
-    os.unlink("fish.csv")
+    csvreader = csv.reader(reader)
+    records = []
+    columns = None
+    for line in csvreader:
+        if skiprows > 0:
+            skiprows -= 1
+            continue
+        if not records and not columns:
+            # look for data
+            if any([bool(c) for c in line]):
+                if headers:
+                    columns = line
+                else:
+                    if numeric:
+                        records.append([[_asnumeric(c),] for c in line])
+                    else:
+                        records.append([[c,] for c in line])
+            else:
+                # no data
+                continue
+        else:
+            # already a df
+            if numeric:
+                records.append([_asnumeric(c) for c in line])
+            else:
+                records.append([c for c in line])
+    if fname:
+        reader.close()
+    return DataFrame.from_records(records, columns=columns)

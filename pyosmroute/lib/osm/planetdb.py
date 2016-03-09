@@ -84,34 +84,3 @@ class PlanetDB(GenericDB):
                 return tuple(zip(*tup))[0]
             else:
                 return ()
-
-
-if __name__ == "__main__":
-    # test
-    from dbconfig import DB_NAME, DB_PASSWORD, DB_USER, DB_HOST
-    osmdb = PlanetDB(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
-    osmdb.connect()
-    try:
-        print("Getting ways from node ids")
-        print(osmdb.node_way(253333910))
-        print(osmdb.node_way(253333910, 3304026514))
-        print(osmdb.node_way(55))  # returns empty
-        print(osmdb.node_way(55, 253333910))  # returns empty
-
-        print("Getting nodes attributes by id")
-        print(osmdb.nodes(253333910))
-        print(osmdb.nodes(253333910, 3304026514))
-        print(osmdb.nodes(55))  # returns empty
-        print(osmdb.nodes(55, 253333910))  # returns one empty line
-
-        print("Getting way attributes by id")
-        print(osmdb.ways(4181592, 55))  # onerow
-        print(osmdb.ways(55))  # empty
-
-        a = osmdb.ways(4181592, 4182662)  # two rows
-        print(a)
-        print(a.colnames())
-
-    except:
-        log("error!", stacktrace=True)
-    osmdb.disconnect()

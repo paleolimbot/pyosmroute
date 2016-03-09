@@ -7,16 +7,18 @@ ERROR = "error"
 MESSAGE = "message"
 
 
-def config_logger():
+def config_logger(**kwargs):
+    if "level" not in kwargs:
+        kwargs["level"] = logging.DEBUG
     global __is_configured
     logging.basicConfig(level=logging.DEBUG)
     __is_configured = True
 
 
-def log(message, level=DEBUG, stacktrace=False):
+def log(message, level=logging.DEBUG, stacktrace=False):
     if not __is_configured:
-        config_logger()
+        return
     if stacktrace:
         logging.exception(message)
     else:
-        logging.debug(message)
+        logging.log(level, message)

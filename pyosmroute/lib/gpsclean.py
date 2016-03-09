@@ -127,32 +127,3 @@ def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recur
             return newdf
     else:
         return indf
-
-
-def writecleaned(df, file, include_extra=True):
-    if not include_extra:
-        df = df.copy()
-        if "_velocity" in df:
-            del df["_velocity"]
-        if "_datetime" in df:
-            del df["_datetime"]
-    with open(file, "w") as f:
-        f.write("RawGPS_cleaned\n")
-        df.write(f, driver="csv")
-
-
-def readcleaned(file):
-    df = DataFrame.read(file, skiprows=1)
-    addvelocities(df, force=True)
-    return df
-
-
-if __name__ == "__main__":
-    # test
-    df = DataFrame.read("../../../example-data/badtrips/trip_sensor_086f1b28-a8f8-4663-aaec-050a4c40ec24/RawGPS.csv",
-                        skiprows=1)
-    print("Testing data frame with %s rows" % len(df))
-    df = cleanpoints(df)
-    print("got data frame with %s rows" % len(df))
-    # write "fixed" RawGPS.csv
-    writecleaned(df, "RawGPS.csv")

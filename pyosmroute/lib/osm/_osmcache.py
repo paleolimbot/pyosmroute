@@ -247,39 +247,3 @@ class OSMCache(object):
                 return sdist + edist + distance, nodes
         else:
             return None, []
-
-if __name__ == "__main__":
-    from dbconfig import DB_NAME, DB_PASSWORD, DB_USER, DB_HOST
-    import sys
-    import os
-    from lib.dbinterface import PlanetDB
-    from lib.dataframe import DataFrame
-
-    folder = sys.argv[1] if len(sys.argv) >= 2 else \
-        "../../../../example-data/ChinaTrips_v2/trip_sensor_41b705b6-a44f-4da2-a54b-f81c51fabb80"
-
-    log("Reading trip %s" % folder)
-    gpsdf = DataFrame.read(os.path.join(folder, "RawGPS.csv"), skiprows=1)
-    radius = 50
-
-    db = PlanetDB(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
-    db.connect()
-    try:
-        lon = gpsdf.Longitude
-        lat = gpsdf.Latitude
-
-        log("Fetching all possible ways within radius %s..." % radius)
-        ways = [db.nearest_ways(lon[i], lat[i], radius=radius) for i in range(len(gpsdf))]
-        idlist = []
-        for wayids in ways:
-            for id in wayids:
-                idlist.append(id)
-
-        cache = OSMCache(db, "car")
-        log("Building Cache...")
-        cache.addways(*idlist)
-        log("Loaded %s nodes and %s ways with %s links" % (len(cache.nodes), len(cache.ways), len(cache.routing)))
-        print(cache.get_segment(idlist[0], (lon[0], lat[0])))
-    except:
-        log("Error executing test!", stacktrace=True)
-    db.disconnect()
