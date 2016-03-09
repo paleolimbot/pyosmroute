@@ -2,7 +2,6 @@
 from lib.dataframe import DataFrame
 import os
 from lib.logger import log
-import lib.tripstats as tripstats
 import lib.osm.mapmatch as mapmatch
 import json
 
@@ -91,13 +90,6 @@ class TripFolder(TripInterface):
             except IOError:
                 pass
 
-    def calcstats(self):
-        # leave which stats to calculate up to the lib.tripstats module
-        tripstats.calcstats(self, self.stats)
-        if self.writecache:
-            with open(self.__statsfile, "w") as f:
-                json.dump(self.stats, f)
-
     def _load_item(self, item):
         log("Reading item %s for folder %s" % (item, self.info["folder"]))
 
@@ -175,8 +167,6 @@ if __name__ == "__main__":
     print(trip.osmmatch[0])
 
     # test if pandas data frame works in this code
-    tripstats.load_default()
-    tripstats.load_planetdb(osmdb)
     trip = TripFolder("../../../training-data/car/2016-03-02 18_16_13_Car - Normal Drive_Android", planetdb=osmdb,
                       usecache=False)
     trip.gps = pd.read_csv("../../../training-data/car/2016-03-02 18_16_13_Car - Normal Drive_Android/RawGPS.csv",

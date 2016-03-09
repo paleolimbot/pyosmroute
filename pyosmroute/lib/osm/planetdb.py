@@ -1,5 +1,7 @@
-from lib.dbinterface import GenericDB, asdataframe
-from lib.logger import log
+
+from ..dbinterface import GenericDB, asdataframe
+from ..logger import log
+
 
 class PlanetDB(GenericDB):
     """

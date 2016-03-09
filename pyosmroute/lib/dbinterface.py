@@ -2,8 +2,8 @@
 
 import psycopg2
 import numpy as np
-from lib.logger import log
-from lib.dataframe import DataFrame
+from .logger import log
+from .dataframe import DataFrame
 
 
 class DBException(Exception):

@@ -1,8 +1,9 @@
 
-from lib.geomeasure import geodist, bearing_to, crosstrack_error, bearing_difference, along_track_distance
-from lib.osm._routing import Router
-from lib.logger import log
 import numpy as np
+
+from ..geomeasure import geodist, bearing_to, crosstrack_error, bearing_difference, along_track_distance
+from ._routing import Router
+from ..logger import log
 
 _WEIGHTINGS = {
       'motorway': {'car': 10},

@@ -2,27 +2,28 @@
 import time
 import numpy as np
 
-from lib.logger import log
-from lib.dataframe import DataFrame
-import lib.gpsclean as gpsclean
+from ..logger import log
+from ..dataframe import DataFrame
+from .. import gpsclean
 
-from lib.osm.planetdb import PlanetDB
-from lib.osm._probabilities import emission_probability, get_lazy, get_all
-from lib.osm._osmcache import OSMCache
-from lib.osm._hiddenmarkovmodel import HiddenMarkovModel
+from .planetdb import PlanetDB
+from ._probabilities import emission_probability, get_lazy, get_all
+from ._osmcache import OSMCache
+from ._hiddenmarkovmodel import HiddenMarkovModel
 
 
-def nearest_road(db, lon, lat, radius=15):
-    res = db.nearest_ways(lon, lat, radius=radius)
-    if res:
-        return db.ways(res[0]).iloc[0]
-    else:
-        return None
+def nearest_road(db, *points, radius=15):
+    allres = []
+    for point in points:
+        lon, lat = point
+        res = db.nearest_ways(lon, lat, radius=radius)
+        allres.append(db.ways(res[0]).iloc[0] if res else None)
+    return allres[0] if len(allres) == 1 else allres
 
 
 def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, beta=10.0, maxiter=1,
              minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=1,
-             lazy_probabilities=True, processes=1, points_summary=True, segments_summary=True):
+             lazy_probabilities=True, points_summary=True, segments_summary=True):
     # maxvel used to discard improbable routes when calculating driving distance between two points
     # less than 100 causes gaps (probably because time resolution is only plus or minus one second
     # plus distance uncertainties). if maxvel is too high, performance slows down significantly.
@@ -111,7 +112,7 @@ def osmmatch(db, gpsdf, searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, be
         tpdict = get_lazy(cache, obs=gpspoints, states=states, beta=beta,
                           grace_distance=minpointdistance, maxvel=maxvel) if lazy_probabilities else \
             get_all(cache, obs=gpspoints, states=states, beta=beta,
-                          grace_distance=minpointdistance, maxvel=maxvel, processes=processes)
+                          grace_distance=minpointdistance, maxvel=maxvel)
 
         log("Extracting probable path...")
         hmm = HiddenMarkovModel(eprobs, tpdict)

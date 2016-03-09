@@ -3,11 +3,11 @@ Library for cleaning raw GPS data
 """
 
 import datetime
-from lib.dataframe import DataFrame
-from lib.geomeasure import geodist, bearing_to, bearing_difference
-from lib.logger import log
 import numpy as np
 
+from .dataframe import DataFrame
+from .geomeasure import geodist, bearing_to, bearing_difference
+from .logger import log
 
 def _parsetime(text):
     if text:

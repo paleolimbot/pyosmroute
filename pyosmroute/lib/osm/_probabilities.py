@@ -2,9 +2,8 @@
 Geometry tools for mapmatch.py
 """
 
-from lib.geomeasure import bearing_difference, geodist
 import numpy as np
-from multiprocessing import Pool
+from ..geomeasure import bearing_difference, geodist
 
 
 def _bearing_diff(bearinggps, bearingroad, oneway):
@@ -59,21 +58,14 @@ def get_lazy(osmcache, obs, states, beta=10.0, grace_distance=0, maxvel=250):
     return LazyTransitionProbabilities(osmcache, obs, states, beta=beta, grace_distance=grace_distance, maxvel=maxvel)
 
 
-def get_all(osmcache, obs, states, beta=10.0, grace_distance=0, maxvel=250, processes=1):
+def get_all(osmcache, obs, states, beta=10.0, grace_distance=0, maxvel=250):
     tis = [(t, i) for t, substates in enumerate(states) if t < len(states)-1 for i in range(len(substates))]
     args = [(osmcache, states, obs, t, i, maxvel, beta, grace_distance) for t, i in tis]
     tprobs = DictTransitionProbabilities()
-    if processes > 1:
-        with Pool(processes) as p:
-            for result in p.starmap(_batch_transitions, args, chunksize=len(args)//processes):
-                keys, probs, data = result
-                for key in keys:
-                    tprobs[key] = probs[key], data[key]
-    else:
-        for result in map(_batch_transitions, *zip(*args)):
-            keys, probs, data = result
-            for key in keys:
-                tprobs[key] = probs[key], data[key]
+    for result in map(_batch_transitions, *zip(*args)):
+        keys, probs, data = result
+        for key in keys:
+            tprobs[key] = probs[key], data[key]
 
     return tprobs
 

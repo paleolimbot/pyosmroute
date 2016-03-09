@@ -1,6 +1,6 @@
 
 import numpy as np
-from lib.logger import log
+from ..logger import log
 
 
 def _coorditer(numpyarray):

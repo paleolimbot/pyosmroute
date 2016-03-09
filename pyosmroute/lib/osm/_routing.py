@@ -1,6 +1,6 @@
 
-from lib.geomeasure import geodist
 import numpy as np
+from ..geomeasure import geodist
 
 
 class Router(object):

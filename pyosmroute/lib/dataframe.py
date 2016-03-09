@@ -2,7 +2,7 @@
 import numpy as np
 import csv
 import decimal
-from lib.logger import log
+from .logger import log
 
 
 def _len(obj):
