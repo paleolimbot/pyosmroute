@@ -1,8 +1,6 @@
-
-from .lib import dataframe
-from .lib.osm import mapmatch
-from .lib.osm.planetdb import PlanetDB
 import numpy as np
+from .osm import mapmatch
+from .osm.planetdb import PlanetDB
 
 
 def get_planet_db(db_host=None, db_user=None, db_password=None, db_name=None):
@@ -19,5 +17,5 @@ def get_planet_db(db_host=None, db_user=None, db_password=None, db_name=None):
 def on_road_percent(db, gpsdf, radius=15, latitude_column="Latitude", longitude_column="Longitude"):
         res = np.array([mapmatch.nearest_road(db, (gpsdf[longitude_column][i], gpsdf[latitude_column][i]),
                                               radius=radius) is not None
-                       for i in range(len(gpsdf))])
+                        for i in range(len(gpsdf))])
         return res.sum() / len(gpsdf)

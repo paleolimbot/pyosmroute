@@ -1,14 +1,13 @@
-
 import time
+
 import numpy as np
 
-from ..logger import log
-from ..dataframe import DataFrame
-from .. import gpsclean
-
-from ._probabilities import emission_probability, get_lazy, get_all
-from ._osmcache import OSMCache
+from pyosmroute import gpsclean
 from ._hiddenmarkovmodel import HiddenMarkovModel
+from ._osmcache import OSMCache
+from ._probabilities import emission_probability, get_lazy, get_all
+from ..dataframe import DataFrame
+from ..logger import log
 
 
 def nearest_road(db, *points, radius=15):
