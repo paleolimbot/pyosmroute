@@ -62,7 +62,7 @@ def _bearing_diff(bearinggps, bearingroad, oneway):
 
 
 def _isoneway(waydict):
-    return ("oneway" in waydict["tags"]) and (waydict["tags"]["oneway"] in ('yes','true','1'))
+    return ("oneway" in waydict["tags"]) and (waydict["tags"]["oneway"] in ('yes', 'true', '1'))
 
 
 def _distcompare(p1, p2, p3):
@@ -91,6 +91,13 @@ def _distcompare(p1, p2, p3):
 
 
 class OSMCache(object):
+    """
+    An object representing a cache of ways and nodes from a PlanetDB. Attribute nodes is a dict
+    with a key of node_id, attribute ways is a dict with key of way_id, routing is a dict such
+    that routing[from_node_id][to_node_id] = segment, where segment is a dict containing information
+    about the segment. Transportation type is not really implemented, but could be if the appropriate
+    ways were selected using a query from the database.
+    """
 
     def __init__(self, db, trans_type="car"):
         self.trans_type = trans_type
@@ -100,6 +107,11 @@ class OSMCache(object):
         self.routing = {}
 
     def addways(self, *wayids):
+        """
+        Add ways to the cache by id.
+
+        :param wayids: A list of wayids.
+        """
         ways = self.db.ways(*wayids)
         for i in range(len(ways)):
             way = ways.iloc[i]
@@ -116,16 +128,16 @@ class OSMCache(object):
                 p1 = (n1["lon"], n1["lat"])
                 p2 = (n2["lon"], n2["lat"])
                 seg = {'wayid': way["id"],
-                    'segment': k,
-                    'p1': p1, 'p2': p2,
-                    'node1': nodes[k-1], 'node2': nodes[k],
-                    'distance': geodist(p1, p2),
-                    'bearing': bearing_to(p1, p2),
-                    'oneway': oneway,
-                    'typetag': typetag,
-                    'name': name, # useful for debugging
-                    'weight': _weighting(self.trans_type, typetag)
-                  }
+                        'segment': k,
+                        'p1': p1, 'p2': p2,
+                        'node1': nodes[k-1], 'node2': nodes[k],
+                        'distance': geodist(p1, p2),
+                        'bearing': bearing_to(p1, p2),
+                        'oneway': oneway,
+                        'typetag': typetag,
+                        'name': name, # useful for debugging
+                        'weight': _weighting(self.trans_type, typetag)
+                        }
                 self._addlink(seg)
 
     def _addlink(self, seg, reverse=False):
@@ -135,9 +147,14 @@ class OSMCache(object):
         except KeyError:
             self.routing[nodes[0]] = {nodes[1]: seg}
         if not seg["oneway"] and not reverse:
-            self._addlink(seg, True) # passing true here keeps from recursing more than once
+            self._addlink(seg, True)  # passing true here keeps from recursing more than once
 
     def addnodes(self, *nodes):
+        """
+        Add nodes to the database by ID.
+
+        :param nodes: A list of node ids.
+        """
         nodes = self.db.nodes(*nodes)
         for i in range(len(nodes)):
             node = nodes.iloc[i]
@@ -152,8 +169,14 @@ class OSMCache(object):
             except KeyError:
                 raise KeyError("Segment not found: wayid %s; segment %s" % (wayid, i))
 
-    def get_segment(self, wayid, pt, delta=0.5):
-        # TODO this needs optimization: for long ways with many points this is incredibly slow
+    def get_segment(self, wayid, pt):
+        """
+        Get the segment from the way that best represents the point (lon, lat).
+
+        :param wayid: The wayid the point should be matched to
+        :param pt: The point (lon, lat)
+        :return: A dict containing all cached information about the segment.
+        """
         # information to compare with segments
         # delta parameter in the wiggle room in metres in regards to seeing if a segment is valid
         segments = list(self._segments(wayid))
@@ -173,6 +196,20 @@ class OSMCache(object):
         return seg
 
     def driving_distance(self, s1, s2, maxdist=None, grace_distance=0.0):
+        """
+        Retreive the driving distance between two segments as returned by get_segment(). This means
+        driving on the road from the nearest point on the road from point 1 to the nearest point on the road
+        to point 2.
+
+        :param s1: A segment as returned by get_segment() (from here)
+        :param s2: A segment as returned by get_segment() (to here)
+        :param maxdist: The maximum distance to search for a route, usually constrained by max velocity.
+        :param grace_distance: Setting this as a positive number sometimes helps if, due to GPS error, it appears
+        that the user is going backwards along a one-way segment. This will result in a break in the model or an odd
+        result.
+        :return: A two-tuple: distance in metres, nodes between start/end destination including one of the start/end
+        nodes on each matched segment.
+        """
         # segments as produced by get_segment()
         # grace_distance used for moving the wrong way down the same segment. not having this
         # can cause errors when the gps is stationary (and may appear to be moving backwards)
