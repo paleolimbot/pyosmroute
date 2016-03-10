@@ -80,28 +80,36 @@ class _Iloc(object):
 
 class DataFrame(object):
     """
-    An object mostly designed to store database output in a way that is easy to process.
-    Not designed to be easily modified, corner cases are definitely not tackled. The idea
-    is basically to be able to select columns by name. Columns are Numpy to allow for
-    vector processing.
+    A lightweight copy of the Pandas DataFrame class (http://pandas.pydata.org/pandas-docs/stable/dsintro.html).
+    All basic operations are supported such as selecting columns by indexing (e.g. df['column1']) or attribute
+    (e.g. df.column1). Columns are stored as numpy.ndarray objects, so indexing of columns according to
+    anything in numpy is supported.
     """
-    def __init__(self, *args, **kwargs):
+
+    def __init__(self, *args, columns=None, **kwargs):
+        """
+        Instantiate a DataFrame (also can do this from read_csv()).
+
+        :param args: Iterables of values by column.
+        :param columns Column names for args
+        :param kwargs: Key/value parameters
+        :return:
+        """
         self.__rows = None
-        if "columns" in kwargs:
-            _columns = list(kwargs["columns"])
-            del kwargs["columns"]
+        if columns is not None:
+            columns = list(columns)
             if len(args) == 0:
                 # empty data frame
-                args = [[] for i in range(len(_columns))]
-            if len(_columns) != len(args):
-                raise ValueError("Length of columns must be equal to list of names: %s, %s" % (_columns,
-                                                                                                 len(args)))
+                args = [[] for i in range(len(columns))]
+            if len(columns) != len(args):
+                raise ValueError("Length of columns must be equal to list of names: %s, %s" % (columns,
+                                                                                               len(args)))
         else:
-            _columns = [self.__default_arg_name(i) for i in range(len(args))]
+            columns = [self.__default_arg_name(i) for i in range(len(args))]
 
         self.__keynames = []
         for i in range(len(args)):
-            self.__setitem__(_columns[i], args[i])
+            self.__setitem__(columns[i], args[i])
         for key, value in kwargs.items():
             self.__setitem__(key, value)
 
@@ -111,22 +119,22 @@ class DataFrame(object):
         return "V%02d" % index
 
     def copy(self):
+        """
+        :return: A shallow copy of the DataFrame (underlying ndarras are not copied)
+        """
         return DataFrame(*[self[col] for col in self], columns=self.__keynames)
 
-    def nrow(self):
-        log("WARNING nrow() is deprecated, use len() instead.")
-        return len(self)
-
     def ncol(self):
+        """
+        :return: The number of columns. Probably shouldn't use this as it isn't a part of pandas.DataFrame
+        """
         return len(self.__keynames)
 
     def columns(self):
-        log("WARNING: DataFrame.columns() as a method is deprecated, use 'in' and iter() instead")
+        """
+        :return: The columns. Probably shouldn't use this as it isn't a part of pandas.DataFrame
+        """
         return np.array(self.__keynames)
-
-    def rowasdict(self, i):
-        log("WARNING: DataFrame.rowasdict(i) is deprecated, use iloc[i] instead")
-        return self._row(i)
 
     def _subset(self, rows, cols):
         if type(cols) == slice:
@@ -145,6 +153,13 @@ class DataFrame(object):
         return _DFRow(self.__keynames, [self[col][i] for col in self])
 
     def itertuples(self, header=False, rownames=True):
+        """
+        An iterator that iterates over rows.
+
+        :param header: True if the header should be inclued in the iterations.
+        :param rownames: True if rownames should be inclued in the rows returned.
+        :return: Each row is basically an ordered dictionary that can be indexed by name or position.
+        """
         if header:
             if rownames:
                 yield [-1, ] + self.__keynames
@@ -219,6 +234,15 @@ class DataFrame(object):
         return self.__dict__[key]
 
     def append(self, *args, **kwargs):
+        """
+        Append a row to the data frame. Must have same number of cols as the DataFrame. Technically
+        more than one value can be appended at a time, but this works poorly if multidimentional types
+        are to be appended (e.g. tuple objects).
+
+        :param args: A list of values added by column name.
+        :param kwargs: Values to be added by column name.
+        """
+
         if (len(args) + len(kwargs)) != self.ncol():
             raise ValueError("Dimension mismatch: %s cols found and %s expected" % (len(args)+len(kwargs), self.ncol()))
         newrows = None
@@ -227,7 +251,7 @@ class DataFrame(object):
         lengths = [_len(arg) for arg in args] + [_len(value) for value in kwargs.values()]
         newrows = min(lengths)
         if any([length != newrows for length in lengths]):
-            log("WARNING: possible dimension mismatch in DataFrame.append()")
+            raise ValueError("possible dimension mismatch in DataFrame.append()")
         axis = None if newrows > 1 else 0
 
         # going to use
@@ -245,19 +269,25 @@ class DataFrame(object):
     def __bool__(self):
         return self.__rows is not None and self.__rows > 0
 
-    def cols(self):
-        for i in range(len(self.__columns)):
-            yield self.__columns[i], self.__getitem__(i)
-        for key in self.__keynames:
-            yield self.__getitem__(key)
-
     def __repr__(self, sep="\t"):
         return "\n".join(sep.join(str(cell) for cell in row) for row in self.itertuples(header=True, rownames=False))
 
     def head(self, nrow=6):
+        """
+        Return the first nrows of the dataframe as a new DataFrame.
+
+        :param nrow: The number of rows to return.
+        :return: The first nrows of the dataframe as a new DataFrame.
+        """
         return self.iloc[:nrow, :]
 
-    def tail(self, nrow):
+    def tail(self, nrow=6):
+        """
+        Return the last nrows of the dataframe as a new DataFrame.
+
+        :param nrow: The number of rows to return.
+        :return: The last nrows of the dataframe as a new DataFrame.
+        """
         return self.iloc[(len(self)-nrow):len(self), :]
 
     def _repr_html_(self):
@@ -271,6 +301,13 @@ class DataFrame(object):
         return html
 
     def to_csv(self, writer, driver=None, mode="w"):
+        """
+        Write this object to writer using driver.
+
+        :param writer: A file handle or filename.
+        :param driver: Either 'csv' or 'tsv', automatically determined by extension if None
+        :param mode: 'w' for write, 'a' for append. using 'a' will omit printing headers.
+        """
         fname = None
         if "write" in dir(writer):
             # is an open file object
@@ -317,11 +354,26 @@ class DataFrame(object):
 
     @staticmethod
     def from_records(data, columns=None):
+        """
+        Creates a DataFrame from an iterable grouped by row.
+
+        :param data: An interable grouped by row.
+        :param columns: Column names for data.
+        :return: A DataFrame with the requested data.
+        """
         return DataFrame(*zip(*data)) if columns is None else DataFrame(*zip(*data), columns=columns)
 
 
     @staticmethod
     def from_dict_list(list_of_dicts, no_value=float('nan'), keys=None):
+        """
+        Flattens a list of dict objects into a DataFrame.
+
+        :param list_of_dicts: What it sounds like.
+        :param no_value: The value to use if not all dicts have the same keys.
+        :param keys: Use only these keys to create the data frame.
+        :return: A DataFrame with the resulting data.
+        """
         if keys is None:
             keys = set()
             for dict in list_of_dicts:
@@ -333,6 +385,16 @@ class DataFrame(object):
 
 
 def read_csv(reader, driver=None, headers=True, skiprows=0, numeric=True):
+    """
+    Reads a file in as a DataFrame.
+
+    :param reader: A file handle or filename.
+    :param driver: The driver with which to read the file, or None for auto by extension. Currently only csv works.
+    :param headers: True if headers should be written, false otherwise.
+    :param skiprows: Skip this number of rows before reading data.
+    :param numeric: True if data should be converted to numeric (if possible).
+    :return: A DataFrame with the resulting data.
+    """
     fname = None
     if "readline" in dir(reader):
         # is an open file object

@@ -11,6 +11,14 @@ from ..logger import log
 
 
 def nearest_road(db, *points, radius=15):
+    """
+    Finds the nearest road to points, giving up after raidus radius.
+
+    :param db: A PlanetDB database object.
+    :param points: One or more tuples of (lon, lat).
+    :param radius: The radius at which to terminate the search
+    :return: A DataFrame with the information about the way closest to the point or None.
+    """
     allres = []
     for point in points:
         lon, lat = point
