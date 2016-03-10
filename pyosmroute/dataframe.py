@@ -254,6 +254,22 @@ class DataFrame(object):
     def __repr__(self, sep="\t"):
         return "\n".join(sep.join(str(cell) for cell in row) for row in self.itertuples(header=True, rownames=False))
 
+    def head(self, nrow=6):
+        return self.iloc[:nrow, :]
+
+    def tail(self, nrow):
+        return self.iloc[(len(self)-nrow):len(self), :]
+
+    def _repr_html_(self):
+        """
+        Jupyter Notebook magic repr function.
+        """
+        head = '<tr>%s</tr>\n' % ''.join(['<td><strong>%s</strong></td>' % c for c in self.__keynames])
+        rows = [''.join(['<td>%s</td>' % c for c in row])
+                          for row in self.itertuples(rownames=False, header=False)]
+        html = '<table>{}</table>'.format(head + '\n'.join(['<tr>%s</tr>' % row for row in rows]))
+        return html
+
     def to_csv(self, writer, driver=None, mode="w"):
         fname = None
         if "write" in dir(writer):

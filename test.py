@@ -4,15 +4,15 @@ import pyosmroute as pyosm
 
 
 def test_match(db):
-    import pandas as pd
+    #import pandas as pd
     file = "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv"
 
     pyosm.log("Reading trip %s" % file)
     gps = pyosm.read_csv(file, skiprows=1)
     # test parameterization of columns
     pyosm.osmmatch(db, gps, lat_column=1, lon_column=2, unparsed_datetime_col="Time (UTC)")
-    gpspd = pd.read_csv(file, skiprows=1)
-    pyosm.osmmatch(db, gpspd, ) # test that Pandas data frame works just as well
+    #gpspd = pd.read_csv(file, skiprows=1)
+    #pyosm.osmmatch(db, gpspd, ) # test that Pandas data frame works just as well
     stats, points, segs = pyosm.osmmatch(db, gps)
     if points:
         # points.write("OSMPoints.csv")
@@ -55,6 +55,11 @@ def test_data_frame():
     b["newcol"] = [] #like this
     b.append(1,2,3, newcol="bananas")
     a.append([4, 5], ["four", "five"], ["data4", "data5"], newcol=[13, 10])
+
+    pyosm.log(a._repr_html_())
+    pyosm.log(a.head(2))
+    pyosm.log(a.tail(2))
+
     pyosm.log(a)
     pyosm.log(b)
     with open("fish.csv", "w") as f:
