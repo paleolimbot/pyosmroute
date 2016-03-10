@@ -10,3 +10,4 @@ __pycache__
 *_osmpoints.csv
 rosm.cache
 testmatch.pdf
+.ipynb_checkpoints

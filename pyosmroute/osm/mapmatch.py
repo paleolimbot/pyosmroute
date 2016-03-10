@@ -50,7 +50,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     :param minpoints: After cleaning the GPS data such that there are data points ever 'minpointdistance' metres,
                       if fewer than this number of points remain, no matching is performed. For debugging it's good
                       to keep this low, but realistically any trip with less than about 20 points isn't worth matching.
-    :param maxvel: The maximum assumed velocity (m/s_. This value is used to terminate routing between two points once
+    :param maxvel: The maximum assumed velocity (m/s). This value is used to terminate routing between two points once
                    the route would require the driver to travel over this speed. GPS points are noisy enough that this
                    must be about twice the maximum speed. Anything under 250 caused unnecessary gaps during testing.
     :param sigmaZ: The standard deviation of GPS error (metres). A higher value places less emphasis on how close a
