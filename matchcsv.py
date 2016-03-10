@@ -51,14 +51,15 @@ if __name__ == "__main__":
     # output file as -o [FILE]
 
     import argparse
-    parser = argparse.ArgumentParser("Display stats and perform batch operations on Zeusur.io/Polarax trip collection")
+    parser = argparse.ArgumentParser("Run route matching on CSVs containing date/time, latitude, and longitude "
+                                     "information.")
     parser.add_argument("infile", help="Directory containing or a single CSV file with GPS Time (UTC), Latitude,"
                                        " and Longitude columns.")
     parser.add_argument("-r", "--recursive", help="Walk directory recursively", action="store_true", default=False)
     parser.add_argument("-o", "--output", help="Specify summary output file, use '.csv' or '.tsv' extension.")
-    parser.add_argument("--writepoints", help="Write point matches to %FILE%_osmpoints.csv",
+    parser.add_argument("--writepoints", help="Write point matches to FILE_osmpoints.csv",
                         action="store_true", default=False)
-    parser.add_argument("--writesegs", help="Write all segment matches to %FILE%_osmsegs.csv",
+    parser.add_argument("--writesegs", help="Write all segment matches to FILE_osmsegs.csv",
                         action="store_true", default=False)
     parser.add_argument("--processes", help="Specify number of worker processes.", type=int, default=1)
     parser.add_argument("--chunksize", help="Specify the multiprocesing chunksize parameter.", type=int, default=10)
