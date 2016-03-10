@@ -4,9 +4,22 @@ from ..geomeasure import geodist
 
 
 class Router(object):
+    """
+    An object utilizing an OSMCache object to route from one node to another.
+    """
 
     def __init__(self, cache, startnode, *endnode, maxdist=None, maxcount=1000000, seed=None, weights=True,
                  exclude=None):
+        """
+        :param cache: an OSMCache object.
+        :param startnode: The node id at which to start.
+        :param endnode: A list of end node ids that will terminate the search.
+        :param maxdist: The maximum distance to search before abandoning a route.
+        :param maxcount: The maximum number of iterations to search.
+        :param seed: If provided, routing will consider this node first.
+        :param weights: True if weighted distance should be considered, False otherwise.
+        :param exclude: Nodes that constitute abandoning a path.
+        """
 
         self.data = cache
         self.queue = []
@@ -21,7 +34,11 @@ class Router(object):
         self.exclude = [] if exclude is None else list(exclude)
 
     def doRoute(self):
-        """Do the routing"""
+        """
+        Do the routing as setup above.
+
+        :return: A 3-tuple: result, nodelist, distance (in metres)
+        """
         closed = [self.searchStart, ] + self.exclude
         self.queue = []
 

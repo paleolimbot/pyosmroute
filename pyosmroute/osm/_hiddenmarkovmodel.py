@@ -29,7 +29,11 @@ class HiddenMarkovModel(object):
         self.queue = []
 
     def viterbi(self):
-
+        """
+        A possibly erroneous implementation of the viterbi algorithm. Navigates the HMM by choosing the highest
+        emission proability * transition probability from the last point TO the points at time t for all t.
+        :return: A list of 2 tuples, each of which contain the i chosen at each t and the probability product.
+        """
         path = []  # a list of the 'i' chosen for each time 't' and its probability
 
         for t in range(len(self.eprobs)):
@@ -47,6 +51,13 @@ class HiddenMarkovModel(object):
         return path
 
     def viterbi_lookahead(self, lookahead=1):
+        """
+        A slightly modified version of the viterbi above, using a n-dimentional array to 'look a head' and choose
+        the option that will lead to the best future outcome. Passing lookahead=0 will result in an identical
+        result as viterbi() above.
+        :param lookahead: The number of steps to look forward from t
+        :return: A list of 2 tuples, each of which contain the i chosen at each t and the probability product.
+        """
         path = []  # a list of the 'i' chosen for each time 't' and its probability
         numobs = len(self.eprobs)
         for t in range(numobs):
@@ -65,6 +76,14 @@ class HiddenMarkovModel(object):
         return path
 
     def _lookahead_matrix(self, prev_i, t0, lookahead):
+        """
+        Creates an n-dimentional array with dimentions such that probs[t][t+1][t+2]...[t+lookahead] = the probability
+        product for that chain.
+        :param prev_i: The previous i.
+        :param t0: The t at which we are trying to make a choice.
+        :param lookahead: The number of steps to look ahead
+        :return: An n-dimentional array such that probs[t][t+1][t+2]...[t+lookahead] = the probability to be maximized
+        """
         eprobs = np.array([self.eprobs[t0+plust] for plust in range(lookahead+1)])  # list of length lookahead
         probs = np.ndarray([len(subeprobs) for subeprobs in eprobs], dtype=float)
         for index in _coorditer(probs):
