@@ -3,6 +3,9 @@
 .Rproj.user
 .RData
 .Rhistory
+*.pyo
+*.pyc
+__pycache__
 *_osmsegs.csv
 *_osmpoints.csv
 rosm.cache

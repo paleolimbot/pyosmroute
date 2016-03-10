@@ -53,11 +53,18 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
         log("Too few points to perform matching (%s)" % len(gpsdf))
         return {"result": "not enough points"}, DataFrame(), DataFrame()
 
+    # at least have output columns have a standard name
+    if "Latitude" not in cleaned or "Longitude" not in cleaned:
+        cleaned["Latitude"] = cleaned[lat_column]
+        cleaned["Longitude"] = cleaned[lon_column]
+        del cleaned[lat_column]
+        del cleaned[lon_column]
+
     # from now on, don't refer to gps data frame, just the gps points (list of dicts)
     gpspoints = [cleaned.iloc[i] for i in range(len(cleaned))]
 
     log("Fetching all possible ways within radius %s..." % searchradius)
-    ways = [DataFrame(wayid=db.nearest_ways(p[lon_column], p[lat_column], radius=searchradius)) for p in gpspoints]
+    ways = [DataFrame(wayid=db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius)) for p in gpspoints]
 
     log("Building in-memory cache...")
     cache = OSMCache(db)
@@ -71,7 +78,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     states = []
     for t, waydf in enumerate(ways):
         ptdict = gpspoints[t]
-        segs = [cache.get_segment(wayid, (ptdict[lon_column], ptdict[lat_column]))
+        segs = [cache.get_segment(wayid, (ptdict["Longitude"], ptdict["Latitude"]))
                 for wayid in waydf["wayid"]]
         states.append(segs)
         eprobs.append([emission_probability(seg, ptdict, sigmaZ=sigmaZ, bearing_penalty_weight=bearing_penalty_weight)
@@ -158,6 +165,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     }
 
     log("Generating summary...")
+
     if points_summary:
         summary = _points_summary(cache, gpspoints, pathsegs)
         _summary_statistics(summary, output=stats, gps_distance=(np.nansum, "gps__distance"), mean_xte=(np.mean, "xte"))

@@ -30,6 +30,9 @@ matchtrip <- function(csvfile, printoutput=FALSE) {
   unlink(pointsfile)
   
   gps <- read.csv(csvfile, skip=1)
+  if(is.null(cbind(out$gps_Longitude, out$gps_Latitude))) {
+    browser()
+  }
   gpspoints <- coordinates(cbind(out$gps_Longitude, out$gps_Latitude))
   #gpspoints <- coordinates(cbind(gps$Longitude, gps$Latitude))
   

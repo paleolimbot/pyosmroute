@@ -184,8 +184,8 @@ class DataFrame(object):
         if key is None:
             raise KeyError("No such column: %s" % orig)
         del self.__dict__[key]
-        if orig in self.__keynames:
-            self.__keynames.remove(orig)
+        if key in self.__keynames:
+            self.__keynames.remove(key)
 
     def __setitem__(self, orig, value, check=True):
         key = self.__internal_key(orig)
