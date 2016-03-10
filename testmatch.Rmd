@@ -13,11 +13,14 @@ source("testmatch.R")
 
 ```{r, results='asis', echo=FALSE, fig.align="center", dpi=800}
 # run all data
-folder <- "example-data/test"
+folder <- "example-data/alldata"
 trips <- list.files(folder, pattern="*.csv", full.names = TRUE)
 
 for(trip in trips) {
-  matchtrip(trip, printoutput = TRUE)
+  tryCatch(matchtrip(trip, printoutput = TRUE), error=function(err) {
+    warning("Error processing trip ", trip, ": ", err)
+  })
+  
   # browser()
   cat("\\newpage\n\n")
 }
