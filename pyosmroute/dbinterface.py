@@ -35,7 +35,7 @@ def byrow(cursor):
 
 def asdataframe(cursor):
     columns = [c[0] for c in cursor.description]
-    hstoreind = np.where("tags"==np.array(columns))[0]
+    hstoreind = np.where("tags" == np.array(columns))[0]
     data = bycol(cursor)
     df = DataFrame(*data, columns=columns)
     for i in hstoreind:
@@ -45,10 +45,7 @@ def asdataframe(cursor):
 
 class GenericDB(object):
     """
-    A generic Postgre DB wrapper designed to abstract the particulars of dealing with
-    databases to the rest of the application. This allows smooth transition to MySQL,
-    SQLite, etc. should it be required. Good for retrieving small amounts of data,
-    bad (slow) for storing lots of it.
+    A generic Postgres DB wrapper, returning cursor results as a DataFrame.
     """
 
     def __init__(self, host, username, password, dbname):
@@ -65,9 +62,18 @@ class GenericDB(object):
         return repr(self)
 
     def is_connected(self):
+        """
+        :return: True if this database has a self.conn attribute, False otherwise.
+        """
         return self.conn is not None
 
     def connect(self):
+        """
+        Connect to this database if it is not currently connected.
+        :return: True if the database is connected, False otherwise.
+        """
+        if self.conn:
+            return True
         log("Connecting to %s" % repr(self))
         try:
             self.conn = psycopg2.connect(host=self.host, user=self.username, password=self.password,
@@ -78,12 +84,22 @@ class GenericDB(object):
             return False
 
     def cursor(self):
+        """
+        Get a new cursor from self.conn
+
+        :return: A psycopg2 Cursor object.
+        """
         if self.conn:
             return self.conn.cursor()
         else:
             raise DBException("Attempted to create cursor from disconnected database")
 
     def disconnect(self):
+        """
+        Disconnect from this database.
+
+        :return: True if database is disconnected, false otherwise.
+        """
         if self.conn:
             self.conn.close()
             self.conn = None
@@ -91,5 +107,4 @@ class GenericDB(object):
             return True
         else:
             log("Failed to disconnect from database: self.conn is None")
-            raise DBException("Cannot disconnect from database that is not connected")
-
+            return True
