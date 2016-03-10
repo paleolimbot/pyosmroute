@@ -40,10 +40,27 @@ def _rotationbyrow(row1, row2, bearing_col="_bearing", datetime_col="_datetime")
 
 
 def datetimes(df, unparsed_col=0):
+    """
+    Return a list of parsed date/times given a DataFrame and column.
+
+    :param df: A DataFrame
+    :param unparsed_col: The column identifier to parse.
+    :return: A list of parsed dates.
+    """
     return [_parsetime(df.iloc[i][unparsed_col]) for i in range(len(df))]
 
 
 def velocities(df, nwindow=2, datetime_col="_datetime", lon_col="Longitude", lat_col="Latitude"):
+    """
+    Return a list of velocities given the symmetric slope around a point as given by nwindow.
+
+    :param df: A DataFrame
+    :param nwindow: The number of points to consider (2 is valid, uses previous point and current point)
+    :param datetime_col: The column containing the parsed datetimes.
+    :param lon_col: The column containing longitude information.
+    :param lat_col: The column containing latitude information.
+    :return: A list of velocities in metres per second.
+    """
     # nwindow: number of points to consider
     iminus = nwindow // 2
     iplus = nwindow - iminus - 1
@@ -53,11 +70,28 @@ def velocities(df, nwindow=2, datetime_col="_datetime", lon_col="Longitude", lat
 
 
 def distances(df, lon_col="Longitude", lat_col="Latitude"):
+    """
+    Return a list of distances from the previous point to the current point.
+
+    :param df: A DataFrame
+    :param lon_col: The column containing longitude information.
+    :param lat_col: The column containing latitude information.
+    :return: A list of distances in metres.
+    """
     return [float("nan"), ] + [_distbyrow(df.iloc[i - 1], df.iloc[i], lon_col=lon_col, lat_col=lat_col)
                                for i in range(1, len(df))]
 
 
 def bearings(df, nwindow=2, datetime_col="_datetime", lon_col="Longitude", lat_col="Latitude"):
+    """
+    Return a list of bearings given the symmetric slope around a point as given by nwindow.
+
+    :param df: A DataFrame
+    :param nwindow: The number of points to consider (2 is valid, uses previous point and current point)
+    :param lon_col: The column containing longitude information.
+    :param lat_col: The column containing latitude information.
+    :return: A list of bearings in degrees.
+    """
     iminus = nwindow // 2
     iplus = nwindow - iminus - 1
     return [_bearingbyrow(df.iloc[max(0, i - iminus)], df.iloc[min(i + iplus, len(df) - 1)],
@@ -65,7 +99,14 @@ def bearings(df, nwindow=2, datetime_col="_datetime", lon_col="Longitude", lat_c
             for i in range(len(df))]
 
 
-def rotations(df, force=True, nwindow=2):
+def rotations(df, nwindow=2):
+    """
+    Return a list of rotation values based on nwindow.
+
+    :param df: A DataFrame
+    :param nwindow: The number of points to consider (2 is valid, uses previous point and current point)
+    :return: A list of rotations in degrees/second.
+    """
     iminus = (nwindow) // 2
     iplus = nwindow - iminus - 1
     return [_rotationbyrow(df.iloc[max(0, i - iminus)], df.iloc[min(i + iplus, len(df) - 1)])
@@ -74,6 +115,18 @@ def rotations(df, force=True, nwindow=2):
 
 def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recursion_limit=100, lat_column="Latitude",
                 lon_column="Longitude"):
+    """
+    Clean points according to min velocity, max velocity and/or distance.
+
+    :param indf: A Dataframe containing unparsed date/times and lat/lon pairs.
+    :param max_velocity: Points that require a velocity greater than this will be discarded (in m/s)
+    :param min_velocity: Points that that require a velocity slower than this will be discarded (in m/s)
+    :param min_distance: Points that are with in this distance of the preious point will be discarded (in metres)
+    :param recursion_limit: Cleaned recursively so that places with multiple points in a bad location are covered.
+    :param lat_column: The column identifier for latitude in the indf.
+    :param lon_column: The column identifier for longitude in the indf.
+    :return: A DataFrame of cleaned points, which may or may not be a copy of the original DataFrame.
+    """
     # if less than 3 rows, return
     if len(indf) < 3:
         return indf

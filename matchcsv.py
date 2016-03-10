@@ -5,6 +5,17 @@ import pyosmroute as pyosm
 
 
 def matchcsv(csvfiles, matchargs, dbargs=None, outpoints=False, outsegs=False):
+    """
+    Do matching on a list of CSV files.
+
+    :param csvfiles: A list of filenames with .csv extensions.
+    :param matchargs: The **kwargs to pass to osmmatch()
+    :param dbargs: The **kwargs to pass to get_planet_db()
+    :param outpoints: True if points output should be written to FILE_osmpoints.csv
+    :param outsegs: True if segments output should be written to FILE_osmsegs.csv
+    :return: A list of dicts that are the 'stats' output of osmmatch().
+    """
+
     if dbargs is None:
         dbargs = {}
     db = pyosm.get_planet_db(**dbargs)

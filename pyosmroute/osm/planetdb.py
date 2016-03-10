@@ -5,12 +5,8 @@ from ..logger import log
 
 class PlanetDB(GenericDB):
     """
-    Database object to represent an OSM Planet file DB. Should contain methods to
-    get_tags(node_id), get_attrs(node_id) and for way_id as well. Searching for
-    nodes based on ways, ways based on nodes should also occur. Also,
-    something like find_closest_nodes(lon, lat, n, maxdistance) should exist.
-
-    Returns are a dataframe.DataFrame (set default by
+    Database object containing OSM data as created by osm2pgsql. See README for specific
+    details on creating this database.
     """
 
     def __init__(self, host, username, password, dbname):
@@ -39,6 +35,13 @@ class PlanetDB(GenericDB):
         return self._transform(lon, lat, 4326, 900913, parse=parse)
 
     def nodes(self, *nodeids):
+        """
+        Get node information according to node ids. Order is not considered between
+        the arguments, and nodes that are not found do not throw a warning (will just not
+        be contained in output)
+        :param nodeids: A list of node ids.
+        :return: A DataFrame with columns id, lon, lat, and tags.
+        """
         arg = " OR ".join("id=%s" % id for id in nodeids)
         with self.cursor() as cur:
             cur.execute("""SELECT id, CAST(lat/100.0 AS FLOAT) as lat, CAST(lon/100.0 AS FLOAT) as lon, tags
@@ -53,18 +56,39 @@ class PlanetDB(GenericDB):
             return out
 
     def node_way(self, *nodeids):
+        """
+        Select a way that contains all of the node ids listed.
+
+        :param nodeids: The node ids
+        :return: A DataFrame of the output.
+        """
         arg = ", ".join(str(nodeid) for nodeid in nodeids)
         with self.cursor() as cur:
             cur.execute("""SELECT * FROM planet_osm_ways where nodes @> ARRAY[%s]::bigint[]""" % arg)
             return asdataframe(cur)
 
     def ways(self, *wayids):
+        """
+        Get way information according to wayids. Order is not considered between
+        the arguments, and ways that are not found do not throw a warning (will just not
+        be contained in output)
+        :param wayids: A list of way ids.
+        :return: A DataFrame with columns id (int), nodes (list), and tags (dict).
+        """
         arg = " OR ".join("id=%s" % id for id in wayids) if wayids else "FALSE"
         with self.cursor() as cur:
             cur.execute("""SELECT * from planet_osm_ways WHERE %s""" % arg)
             return asdataframe(cur)
 
     def nearest_ways(self, lon, lat, radius=15):
+        """
+        Get a list of the wayids closest to this lon/lat, ordered closest first.
+
+        :param lon: The longitude
+        :param lat: The latitude
+        :param radius: The radius to consider
+        :return: A list of wayids
+        """
         pt = self.project(lon, lat, parse=False)
         with self.cursor() as cur:
             cur.execute(
