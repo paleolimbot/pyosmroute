@@ -64,3 +64,13 @@ test <- function() {
 }
 
 matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android_start.csv")
+
+# check pypy
+matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
+          interpreter = "/Users/dewey/d/build/pypy-5.0.0-osx64/bin/pypy")
+
+matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
+          interpreter = "python3")
+
+matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
+          interpreter = "python")

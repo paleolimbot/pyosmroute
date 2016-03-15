@@ -112,7 +112,12 @@ class OSMCache(object):
 
         :param wayids: A list of wayids.
         """
+        # get ways in single query
         ways = self.db.ways(*wayids)
+        # get nodes in single query
+        nodeids = set([item for sublist in [ways.iloc[i]['nodes'] for i in range(len(ways))] for item in sublist])
+        self.addnodes(*nodeids)
+
         for i in range(len(ways)):
             way = ways.iloc[i]
             self.ways[way["id"]] = way
@@ -120,7 +125,7 @@ class OSMCache(object):
             oneway = _isoneway(way)
             typetag = way["tags"]["railway"] if self.trans_type == "train" else way["tags"]["highway"]
             name = way["tags"]["name"] if "name" in way["tags"] else None
-            self.addnodes(*nodes)
+
             # add links
             for k in range(1, len(nodes)):
                 n1 = self.nodes[nodes[k-1]]
