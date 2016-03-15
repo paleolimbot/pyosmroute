@@ -2,17 +2,17 @@ library(prettymapr)
 library(rosm)
 library(sp)
 
-matchtrip <- function(csvfile, printoutput=FALSE) {
+matchtrip <- function(csvfile, printoutput=FALSE, interpreter="python") {
   
   if(printoutput) {
-    output <- system(paste("python matchcsv.py",
+    output <- system(paste(interpreter, "matchcsv.py",
       shQuote(csvfile), "--verbose --writesegs --writepoints", "2>&1"), intern = TRUE)
     cat("```\n")
     print(output)
     cat("\n```")
     cat("\n\n")
   } else {
-    system(paste("python matchcsv.py",
+    system(paste(interpreter, "matchcsv.py",
                  shQuote(csvfile), "--verbose --writesegs --writepoints"))
   }
   

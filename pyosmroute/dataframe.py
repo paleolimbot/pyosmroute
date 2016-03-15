@@ -219,8 +219,11 @@ class DataFrame(object):
                 raise ValueError("Number of observations is not consistent (%s, %s) for arg %s" % (self.__rows,
                                                                                                   len(value),
                                                                                                     key))
-
-        self.__dict__[key] = np.array(value)
+        try:
+            self.__dict__[key] = np.array(value)
+        except ValueError:
+            # raised by pypy's numpy, which doesn't like lists within arrays
+            self.__dict__[key] = value
         if key not in self.__keynames:
             self.__keynames.append(key)
 
