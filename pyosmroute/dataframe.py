@@ -37,15 +37,15 @@ def _asnumeric(obj):
 class _DFRow(dict):
 
     def __init__(self, columns, vals):
-        super().__init__(zip(columns, vals))
+        super(_DFRow, self).__init__(zip(columns, vals))
         self._keys = tuple(columns)
 
     def __getitem__(self, item):
         if item in self:
-            return super().__getitem__(item)
+            return super(_DFRow, self).__getitem__(item)
         else:
             try:
-                return super().__getitem__(self._keys[item])
+                return super(_DFRow, self).__getitem__(self._keys[item])
             except IndexError:
                 raise KeyError("So such key in row")
 
@@ -86,7 +86,7 @@ class DataFrame(object):
     anything in numpy is supported.
     """
 
-    def __init__(self, *args, columns=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Instantiate a DataFrame (also can do this from read_csv()).
 
@@ -96,6 +96,12 @@ class DataFrame(object):
         :return:
         """
         self.__rows = None
+        if "columns" in kwargs:
+            columns = kwargs['columns']
+            del kwargs['columns']
+        else:
+            columns = None
+
         if columns is not None:
             columns = list(columns)
             if len(args) == 0:
@@ -213,8 +219,11 @@ class DataFrame(object):
                 raise ValueError("Number of observations is not consistent (%s, %s) for arg %s" % (self.__rows,
                                                                                                   len(value),
                                                                                                     key))
-
-        self.__dict__[key] = np.array(value)
+        try:
+            self.__dict__[key] = np.array(value)
+        except ValueError:
+            # raised by pypy's numpy, which doesn't like lists within arrays
+            self.__dict__[key] = value
         if key not in self.__keynames:
             self.__keynames.append(key)
 
@@ -225,7 +234,7 @@ class DataFrame(object):
                 raise KeyError("No such column: %s" % item)
             return self.__dict__[key]
         else:
-            return super().__getattribute__(item)
+            return super(DataFrame, self).__getattribute__(item)
 
     def __getitem__(self, item):
         key = self.__internal_key(item)

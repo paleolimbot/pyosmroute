@@ -245,7 +245,7 @@ class OSMCache(object):
             if not s2["oneway"]:
                 return s1['distance'] - s1["alongtrack"] + s2['distance'] - s2["alongtrack"], [s1["node2"], ]
 
-        router = Router(self, s1["node1"], s2["node1"], s2["node2"], maxdist=maxdist)
+        router = Router(self, s1["node1"], (s2["node1"], s2["node2"]), maxdist=maxdist)
         status, nodes, distance = router.doRoute()
 
         if nodes:

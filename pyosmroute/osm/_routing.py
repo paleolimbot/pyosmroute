@@ -8,7 +8,7 @@ class Router(object):
     An object utilizing an OSMCache object to route from one node to another.
     """
 
-    def __init__(self, cache, startnode, *endnode, maxdist=None, maxcount=1000000, seed=None, weights=True,
+    def __init__(self, cache, startnode, endnode, maxdist=None, maxcount=1000000, seed=None, weights=True,
                  exclude=None):
         """
         :param cache: an OSMCache object.
@@ -27,6 +27,8 @@ class Router(object):
         self.weights= weights
         self.maxcount = maxcount
         self.searchStart = startnode
+        if not hasattr(endnode, "__len__"):
+            endnode = (endnode, )
         self.searchEnd = endnode
         endnodes = [cache.nodes[nid] for nid in endnode]
         self.searchendpos = np.mean([n["lon"] for n in endnodes]), np.mean([n["lat"] for n in endnodes])

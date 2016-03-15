@@ -8,7 +8,7 @@ def _coorditer(numpyarray):
     while True:
         try:
             c = it.coords
-            it.__next__()
+            next(it)
             yield c
             pass
         except StopIteration:

@@ -10,7 +10,7 @@ from ..dataframe import DataFrame
 from ..logger import log
 
 
-def nearest_road(db, *points, radius=15):
+def nearest_road(db, radius, *points):
     """
     Finds the nearest road to points, giving up after raidus radius.
 
@@ -77,7 +77,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
                                    1 will not cause errors.
     :param viterbi_lookahead: The length of the path to consider when making decisions about the best path through
                               the Hidden Markov Model. 0 is fastest, 1 produces better results, and 2 appears to be
-                              quite slow.
+                              slow. Passing > 0 to this parameter will not work when using pypy.
     :param lazy_probabilities: True if only transition probabilities that are used should be calculated. If lookahead
                                is 0, this is significantly faster. If lookahead is 1 or greater, most transition
                                probabilties are used, so this does not lead to a performance increase.
@@ -183,7 +183,8 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
 
         log("Extracting probable path...")
         hmm = HiddenMarkovModel(eprobs, tpdict)
-        path = hmm.viterbi_lookahead(lookahead=viterbi_lookahead)
+        # path = hmm.viterbi_lookahead() not pypy friendly!
+        path = hmm.viterbi() if viterbi_lookahead == 0 else hmm.viterbi_lookahead(lookahead=viterbi_lookahead)
         badpoints = [t for t, result in enumerate(path) if result[0] is None]
         if not badpoints:
             break

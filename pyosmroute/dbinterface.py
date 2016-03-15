@@ -1,6 +1,9 @@
 
+try:
+    import psycopg2
+except ImportError:
+    import psycopg2cffi as psycopg2
 
-import psycopg2
 import numpy as np
 from .logger import log
 from .dataframe import DataFrame
@@ -9,11 +12,19 @@ from .dataframe import DataFrame
 class DBException(Exception):
     pass
 
+
+def _where(arg):
+    # this exists because 1-arg np.where is not supported in pypy
+    return np.array([i for i, item in enumerate(arg) if item])
+
 # functions for dealing with data out of the db
 
 
 def pairwise(iterable):
-    itnext = iter(iterable).__next__
+    try:
+        itnext = iter(iterable).__next__
+    except AttributeError:
+        itnext = iter(iterable).next
     while True:
         yield itnext(), itnext()
 
@@ -34,8 +45,8 @@ def byrow(cursor):
 
 
 def asdataframe(cursor):
-    columns = [c[0] for c in cursor.description]
-    hstoreind = np.where("tags" == np.array(columns))[0]
+    columns = [str(c[0]) for c in cursor.description]
+    hstoreind = _where("tags" == np.array(columns))
     data = bycol(cursor)
     df = DataFrame(*data, columns=columns)
     for i in hstoreind:

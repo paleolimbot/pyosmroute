@@ -99,7 +99,7 @@ class TransitionProbabilities(object):
 class DictTransitionProbabilities(TransitionProbabilities):
 
     def __init__(self):
-        super().__init__()
+        super(DictTransitionProbabilities, self).__init__()
         self.probs = {}
         self.data = {}
 
@@ -117,7 +117,7 @@ class DictTransitionProbabilities(TransitionProbabilities):
 class LazyTransitionProbabilities(DictTransitionProbabilities):
 
     def __init__(self, osmcache, obs, states, beta=10.0, grace_distance=0, maxvel=250):
-        super().__init__()
+        super(LazyTransitionProbabilities, self).__init__()
         self.cache = osmcache
         self.obs = obs
         self.states = states

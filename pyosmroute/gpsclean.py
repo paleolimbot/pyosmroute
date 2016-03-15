@@ -5,15 +5,18 @@ Library for cleaning raw GPS data
 import datetime
 import numpy as np
 
-from .dataframe import DataFrame
 from .geomeasure import geodist, bearing_to, bearing_difference
 from .logger import log
 
+
+def _where(arg):
+    # this exists because 1-arg np.where is not supported in pypy
+    return np.array([i for i, item in enumerate(arg) if item])
+
 def _parsetime(text):
     if text:
-        return datetime.datetime.strptime(
-                text.split(".")[0].split("+")[0].replace('"', "").replace("Z", "").replace("T", " "),
-                "%Y-%m-%d %H:%M:%S")
+        stripped = str(text).split(".")[0].split("+")[0].replace('"', "").replace("Z", "").replace("T", " ")
+        return datetime.datetime.strptime(stripped, "%Y-%m-%d %H:%M:%S")
     else:
         return None
 
@@ -136,8 +139,8 @@ def cleanpoints(indf, max_velocity=100, min_velocity=0, min_distance=None, recur
         indf["_datetime"] = datetimes(indf)
     indf["_velocity"] = velocities(indf, nwindow=2, lat_col=lat_column, lon_col=lon_column)
     # test threshold and 0.0 velocity (same point repeated)
-    highpoints = list(np.where(indf._velocity[1:] > max_velocity)[0] + 1) if max_velocity is not None else []
-    lowpoints = list(np.where(indf._velocity[1:] <= min_velocity)[0] + 1) if min_velocity is not None else []
+    highpoints = list(_where(indf._velocity[1:] > max_velocity) + 1) if max_velocity is not None else []
+    lowpoints = list(_where(indf._velocity[1:] <= min_velocity) + 1) if min_velocity is not None else []
     badpoints = list(set(highpoints + lowpoints))
 
     # check first point
