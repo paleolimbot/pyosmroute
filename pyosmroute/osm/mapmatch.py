@@ -122,11 +122,11 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     gpspoints = [cleaned.iloc[i] for i in range(len(cleaned))]
 
     log("Fetching all possible ways within radius %s..." % searchradius)
-    ways = [DataFrame(wayid=db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius)) for p in gpspoints]
+    ways = [db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius) for p in gpspoints]
 
     log("Building in-memory cache...")
     cache = OSMCache(db)
-    idlist = set([item for sublist in [wayids["wayid"] for wayids in ways] for item in sublist])
+    idlist = set([item for sublist in ways for item in sublist])
     cache.addways(*idlist)  # best done like this so there is only one query to the database
     log("Loaded %s nodes and %s ways with %s links" % (len(cache.nodes), len(cache.ways), len(cache.routing)))
 
@@ -134,10 +134,10 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     # 'score' how well each set of observations matches up with each row of the data frame of possible ways
     eprobs = []
     states = []
-    for t, waydf in enumerate(ways):
+    for t, wayids in enumerate(ways):
         ptdict = gpspoints[t]
         segs = [cache.get_segment(wayid, (ptdict["Longitude"], ptdict["Latitude"]))
-                for wayid in waydf["wayid"]]
+                for wayid in wayids]
         states.append(segs)
         eprobs.append([emission_probability(seg, ptdict, sigmaZ=sigmaZ, bearing_penalty_weight=bearing_penalty_weight)
                        for seg in segs])

@@ -115,8 +115,8 @@ class OSMCache(object):
         # get ways in single query
         ways = self.db.ways(*wayids)
         # get nodes in single query
-        nodeids = [item for sublist in [ways.iloc[i]['nodes'] for i in range(len(ways))] for item in sublist]
-        self.addnodes(*set(nodeids))
+        nodeids = set([item for sublist in [ways.iloc[i]['nodes'] for i in range(len(ways))] for item in sublist])
+        self.addnodes(*nodeids)
 
         for i in range(len(ways)):
             way = ways.iloc[i]
