@@ -5,14 +5,14 @@ library(sp)
 matchtrip <- function(csvfile, printoutput=FALSE) {
   
   if(printoutput) {
-    output <- system(paste("python3 matchcsv.py",
+    output <- system(paste("python matchcsv.py",
       shQuote(csvfile), "--verbose --writesegs --writepoints", "2>&1"), intern = TRUE)
     cat("```\n")
     print(output)
     cat("\n```")
     cat("\n\n")
   } else {
-    system(paste("python3 matchcsv.py",
+    system(paste("python matchcsv.py",
                  shQuote(csvfile), "--verbose --writesegs --writepoints"))
   }
   
@@ -62,3 +62,5 @@ test <- function() {
     # browser()
   }
 }
+
+matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android_start.csv")

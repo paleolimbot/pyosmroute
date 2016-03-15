@@ -10,7 +10,7 @@ from ..dataframe import DataFrame
 from ..logger import log
 
 
-def nearest_road(db, *points, radius=15):
+def nearest_road(db, radius, *points):
     """
     Finds the nearest road to points, giving up after raidus radius.
 

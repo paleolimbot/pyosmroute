@@ -13,7 +13,10 @@ class DBException(Exception):
 
 
 def pairwise(iterable):
-    itnext = iter(iterable).__next__
+    try:
+        itnext = iter(iterable).__next__
+    except AttributeError:
+        itnext = iter(iterable).next
     while True:
         yield itnext(), itnext()
 
