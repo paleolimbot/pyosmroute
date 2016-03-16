@@ -174,21 +174,24 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="PyOSMRoute">PyOSMRoute<a class="anchor-link" href="#PyOSMRoute">&#182;</a></h1><h2 id="Installation">Installation<a class="anchor-link" href="#Installation">&#182;</a></h2><p>The <strong>Python 3</strong> package <code>pyosmroute</code> depends on two Python modules: <code>numpy</code> and <code>psycopg2</code>. Both are available via <code>pip</code> (may be <code>pip3</code> on Mac). The interface to the <code>pyosmroute</code> package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are als provided</p>
+<h1 id="PyOSMRoute">PyOSMRoute<a class="anchor-link" href="#PyOSMRoute">&#182;</a></h1><h2 id="Installation">Installation<a class="anchor-link" href="#Installation">&#182;</a></h2><p>The Python package <code>pyosmroute</code> depends on two Python modules: <code>numpy</code> and <code>psycopg2</code> (when using <code>pypy</code> the appropriate package is <code>psycopg2cffi</code>). All are available via <code>pip</code> except <code>numpy</code> for <code>pypy</code>, which requires <a href="http://pypy.org/download.html#installing-numpy">special instructions</a>. The interface to the <code>pyosmroute</code> package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are also provided</p>
 <h3 id="Setting-up-the-OSM-Database">Setting up the OSM Database<a class="anchor-link" href="#Setting-up-the-OSM-Database">&#182;</a></h3><p>The second input needed by <code>pyosmroute</code> methods is a Postgres database created by <a href="http://wiki.openstreetmap.org/wiki/Osm2pgsql">osm2pgsql</a>. The input for this is a .pbf or .osm file acquired from the various distributors of OSM data on the web. It is accessible by country <a href="http://download.gisgraphy.com/openstreetmap/pbf/">here</a>. If multiple countries are desired, it is necessary to use the <a href="http://wiki.openstreetmap.org/wiki/Osmosis">Osmosis</a> tool to merge together bordering countries (or overlapping PBF files). This can be done using the following command:</p>
 
 <pre><code>osmosis --readpbf my_file.pbf --read-pbf my_other_file.pbf --merge --write-pbf combined.pbf</code></pre>
 <p>Adding the PBF file to the database uses the following command:</p>
 
 <pre><code>osm2pgsql -s -C 1600 -H localhost -d DB_name -U DB_user -W combined.pbf</code></pre>
-<p>The most important argument is the <strong>-s</strong> parameter, which leaves a copy of the raw nodes/ways in the database. This data is used by the routing and matching function extensively. The <strong>-C</strong> parameter just specifies an amount of memory to be used (in MB). The <strong>-W</strong> parameter prompts for a password, so it may be desirable to have no password on this database for the preparation phase.</p>
+<p>For the purpose of base testing, a pbf of Kings County in Nova Scotia is included and can be loaded with the command:</p>
+
+<pre><code>osm2pgsql -s -C 1600 -H localhost -d DB_name -U DB_user -W example-data/osm_ns/kings_cty.pbf</code></pre>
+<p>The most important argument is the <strong>-s</strong> parameter, which leaves a copy of the raw nodes/ways in the database. This data is used by the routing and matching function extensively. The <strong>-C</strong> parameter just specifies an amount of memory to be used (in MB). The <strong>-W</strong> parameter prompts for a password, so it may be desirable to have no password on this database for the preparation phase. Note that the database is loaded in <strong>EPSG:900913</strong>. It would be more efficient to have this be in <strong>EPSG:4326</strong> (probably), but ensuring the <strong>-s</strong> tables and the PostGIS spatial indexes are synchronized is essential.</p>
 <h2 id="From-the-Command-Line">From the Command Line<a class="anchor-link" href="#From-the-Command-Line">&#182;</a></h2><p>It's possible to use the <code>matchcsv.py</code> file (in this folder) from the command line to match CSVs and write/aggreate output. This is mostly useful for running the script from R, which has more interctive capabilities for mapping. The usage for the command line interface looks like this:</p>
 
-<pre><code>&gt; python3 matchcsv.py --help
-
+<pre><code>dewey &gt;&gt; python matchcsv.py --help
 usage: Run route matching on CSVs containing date/time, latitude, and longitude information.
-       [-h] [-r] [-o OUTPUT] [--writepoints] [--writesegs]
-       [--processes PROCESSES] [--chunksize CHUNKSIZE] [-v]
+       [-h] [-r] [-o OUTPUT] [--outcols [OUTCOLS [OUTCOLS ...]]]
+       [--writepoints] [--writesegs] [--processes PROCESSES]
+       [--chunksize CHUNKSIZE] [-v] [--matchargs MATCHARGS] [-n N]
        infile
 
 positional arguments:
@@ -201,14 +204,25 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Specify summary output file, use '.csv' or '.tsv'
                         extension.
+  --outcols [OUTCOLS [OUTCOLS ...]]
+                        Specify which summary columns to write.
   --writepoints         Write point matches to FILE_osmpoints.csv
   --writesegs           Write all segment matches to FILE_osmsegs.csv
   --processes PROCESSES
                         Specify number of worker processes.
   --chunksize CHUNKSIZE
                         Specify the multiprocesing chunksize parameter.
-  -v, --verbose         Verbose debug output.</code></pre>
-<p>Note that for this to work, you'll have to have your <code>dbconfig.py</code> setup (see below).</p>
+  -v, --verbose         Verbose debug output.
+  --matchargs MATCHARGS
+                        Arguments to pass to the matching algorithm as a JSON
+                        string.
+  -n N                  Specifiy the number of times to repeat the matching
+                        (useful for speed tests)</code></pre>
+<p>Note that for this to work, you'll have to have your <code>dbconfig.py</code> setup (see below). A useful command for speed testing (assuming you've loaded the included Kings County PBF) is:</p>
+
+<pre><code>python matchcsv.py --verbose -n=20 "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv" -o results.csv
+pypy matchcsv.py --verbose -n=20 "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv" -o results.csv
+python3 matchcsv.py --verbose -n=20 "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv" -o results.csv</code></pre>
 <h2 id="From-R">From R<a class="anchor-link" href="#From-R">&#182;</a></h2><p>The command line interface is best run straight from the <code>testmatch.R</code> or <code>testmatch.Rmd</code>, which are already setup to handle the output and display it complete with scalebar and basemap. This is the preferred method for debugging the script. There is an RStudio project already setup for the directory.</p>
 <h2 id="From-Python">From Python<a class="anchor-link" href="#From-Python">&#182;</a></h2><p>The package is loaded in Python like any normal Python module:</p>
 
@@ -913,7 +927,6 @@ between adjacent segments and connecting to the database instead of reading a do
 <p><strong>lazy_probabilities</strong>: True if only transition probabilities that are used should be calculated. If lookahead is 0, this is significantly faster. If lookahead is 1 or greater, most transition probabilties are used, so this does not lead to a performance increase.</p>
 <p><strong>points_summary</strong>: True if the list of point/segment matches should be returned, False otherwise.</p>
 <p><strong>segments_summary</strong>: True if the complete list of segments should be returned, False otherwise.</p>
-<h2 id="Disconnect-from-the-database!">Disconnect from the database!<a class="anchor-link" href="#Disconnect-from-the-database!">&#182;</a></h2><p>Don't forget!</p>
 
 </div>
 </div>

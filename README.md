@@ -3,7 +3,7 @@
 
 ## Installation
 
-The **Python 3** package `pyosmroute` depends on two Python modules: `numpy` and `psycopg2`. Both are available via `pip` (may be `pip3` on Mac). The interface to the `pyosmroute` package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are als provided
+The Python package `pyosmroute` depends on two Python modules: `numpy` and `psycopg2` (when using `pypy` the appropriate package is `psycopg2cffi`). All are available via `pip` except `numpy` for `pypy`, which requires [special instructions](http://pypy.org/download.html#installing-numpy). The interface to the `pyosmroute` package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are also provided
 
 ### Setting up the OSM Database
 
@@ -19,7 +19,13 @@ Adding the PBF file to the database uses the following command:
 osm2pgsql -s -C 1600 -H localhost -d DB_name -U DB_user -W combined.pbf
 ```
 
-The most important argument is the **-s** parameter, which leaves a copy of the raw nodes/ways in the database. This data is used by the routing and matching function extensively. The **-C** parameter just specifies an amount of memory to be used (in MB). The **-W** parameter prompts for a password, so it may be desirable to have no password on this database for the preparation phase.
+For the purpose of base testing, a pbf of Kings County in Nova Scotia is included and can be loaded with the command:
+
+```
+osm2pgsql -s -C 1600 -H localhost -d DB_name -U DB_user -W example-data/osm_ns/kings_cty.pbf
+```
+
+The most important argument is the **-s** parameter, which leaves a copy of the raw nodes/ways in the database. This data is used by the routing and matching function extensively. The **-C** parameter just specifies an amount of memory to be used (in MB). The **-W** parameter prompts for a password, so it may be desirable to have no password on this database for the preparation phase. Note that the database is loaded in **EPSG:900913**. It would be more efficient to have this be in **EPSG:4326** (probably), but ensuring the **-s** tables and the PostGIS spatial indexes are synchronized is essential.
 
 
 ## From the Command Line
@@ -27,11 +33,11 @@ The most important argument is the **-s** parameter, which leaves a copy of the 
 It's possible to use the `matchcsv.py` file (in this folder) from the command line to match CSVs and write/aggreate output. This is mostly useful for running the script from R, which has more interctive capabilities for mapping. The usage for the command line interface looks like this:
 
 ```
-> python3 matchcsv.py --help
-
+dewey >> python matchcsv.py --help
 usage: Run route matching on CSVs containing date/time, latitude, and longitude information.
-       [-h] [-r] [-o OUTPUT] [--writepoints] [--writesegs]
-       [--processes PROCESSES] [--chunksize CHUNKSIZE] [-v]
+       [-h] [-r] [-o OUTPUT] [--outcols [OUTCOLS [OUTCOLS ...]]]
+       [--writepoints] [--writesegs] [--processes PROCESSES]
+       [--chunksize CHUNKSIZE] [-v] [--matchargs MATCHARGS] [-n N]
        infile
 
 positional arguments:
@@ -44,6 +50,8 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Specify summary output file, use '.csv' or '.tsv'
                         extension.
+  --outcols [OUTCOLS [OUTCOLS ...]]
+                        Specify which summary columns to write.
   --writepoints         Write point matches to FILE_osmpoints.csv
   --writesegs           Write all segment matches to FILE_osmsegs.csv
   --processes PROCESSES
@@ -51,10 +59,21 @@ optional arguments:
   --chunksize CHUNKSIZE
                         Specify the multiprocesing chunksize parameter.
   -v, --verbose         Verbose debug output.
+  --matchargs MATCHARGS
+                        Arguments to pass to the matching algorithm as a JSON
+                        string.
+  -n N                  Specifiy the number of times to repeat the matching
+                        (useful for speed tests)
 
 ```
 
-Note that for this to work, you'll have to have your `dbconfig.py` setup (see below).
+Note that for this to work, you'll have to have your `dbconfig.py` setup (see below). A useful command for speed testing (assuming you've loaded the included Kings County PBF) is:
+
+```
+python matchcsv.py --verbose -n=20 "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv" -o results.csv
+pypy matchcsv.py --verbose -n=20 "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv" -o results.csv
+python3 matchcsv.py --verbose -n=20 "example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv" -o results.csv
+```
 
 ## From R
 
@@ -308,14 +327,14 @@ stats
     {'cleaned_points': 29,
      'gps_distance': 959.58746357071789,
      'in_points': 176,
-     'match_time': 0.2806999683380127,
+     'match_time': 0.28595399856567383,
      'matched_points': 29,
      'matched_proportion': 1.0,
      'mean_xte': 3.896052922553324,
      'result': 'ok',
      'segment_distance': 1014.4255969295274,
-     'started': '2016-03-10 06:09:18 +0000',
-     'summary_time': 0.012389183044433594}
+     'started': '2016-03-10 06:12:14 +0000',
+     'summary_time': 0.0072879791259765625}
 
 
 
@@ -357,13 +376,13 @@ points.head()
 
 
 
-<table><tr><td><strong>alongtrack</strong></td><td><strong>bearing</strong></td><td><strong>dist_from_route</strong></td><td><strong>distance</strong></td><td><strong>name</strong></td><td><strong>node1</strong></td><td><strong>node2</strong></td><td><strong>oneway</strong></td><td><strong>segment</strong></td><td><strong>typetag</strong></td><td><strong>wayid</strong></td><td><strong>weight</strong></td><td><strong>xte</strong></td><td><strong>p1_lon</strong></td><td><strong>p1_lat</strong></td><td><strong>p2_lon</strong></td><td><strong>p2_lat</strong></td><td><strong>pt_onseg_lon</strong></td><td><strong>pt_onseg_lat</strong></td><td><strong>gps_Latitude</strong></td><td><strong>gps_Longitude</strong></td><td><strong>gps_Time (UTC)</strong></td><td><strong>gps__bearing</strong></td><td><strong>gps__datetime</strong></td><td><strong>gps__distance</strong></td><td><strong>gps__original_index</strong></td><td><strong>gps__rotation</strong></td><td><strong>gps__velocity</strong></td><td><strong>waytag_surface</strong></td><td><strong>waytag_highway</strong></td><td><strong>waytag_source</strong></td><td><strong>waytag_name</strong></td><td><strong>waytag_lanes</strong></td></tr>
-<tr><td>2.23854439378</td><td>74.6450684114</td><td>15.8905509385</td><td>3.1957372431</td><td>None</td><td>3624069719</td><td>3624069724</td><td>False</td><td>20</td><td>unclassified</td><td>357012198</td><td>1</td><td>15.8905507538</td><td>-64.3697307537</td><td>45.091637562</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3697032554</td><td>45.0916428929</td><td>45.0917807</td><td>-64.36975685</td><td>2016-03-02 17:37:51</td><td>66.6926429519</td><td>2016-03-02 17:37:51</td><td>nan</td><td>0</td><td>1.92087908237</td><td>1.26275096175</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>0.723006684459</td><td>348.718992698</td><td>6.67381561091</td><td>2.73967742269</td><td>None</td><td>3624069825</td><td>3624069834</td><td>False</td><td>40</td><td>unclassified</td><td>357012198</td><td>1</td><td>6.67381558494</td><td>-64.3693023471</td><td>45.091898403</td><td>-64.3693091743</td><td>45.0919225655</td><td>-64.3693041488</td><td>45.0919047795</td><td>45.09189303</td><td>-64.36938752</td><td>2016-03-02 17:38:16</td><td>114.714620011</td><td>2016-03-02 17:38:16</td><td>31.5687740437</td><td>21</td><td>2.65564234267</td><td>1.25486265933</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>31.0891424822</td><td>341.476092119</td><td>1.59826207608</td><td>38.7551944322</td><td>None</td><td>2542694962</td><td>3624069741</td><td>False</td><td>5</td><td>service</td><td>247371551</td><td>1</td><td>1.59827339691</td><td>-64.3690744445</td><td>45.0913455811</td><td>-64.3692312904</td><td>45.0916760572</td><td>-64.3692002652</td><td>45.0916106867</td><td>45.09160612</td><td>-64.36921957</td><td>2016-03-02 17:38:28</td><td>164.951409631</td><td>2016-03-02 17:38:28</td><td>34.5198996316</td><td>33</td><td>3.20753363665</td><td>3.45601032391</td><td></td><td>service</td><td></td><td></td><td></td></tr>
-<tr><td>-0.0</td><td>341.476092119</td><td>7.94447404041</td><td>38.7551944322</td><td>None</td><td>2542694962</td><td>3624069741</td><td>False</td><td>5</td><td>service</td><td>247371551</td><td>1</td><td>7.94445882325</td><td>-64.3690744445</td><td>45.0913455811</td><td>-64.3692312904</td><td>45.0916760572</td><td>-64.3690744445</td><td>45.0913455811</td><td>45.09132275</td><td>-64.36917034</td><td>2016-03-02 17:38:35</td><td>175.657759108</td><td>2016-03-02 17:38:35</td><td>31.7454619601</td><td>40</td><td>0.158127083996</td><td>5.32494236069</td><td></td><td>service</td><td></td><td></td><td></td></tr>
-<tr><td>19.6727191847</td><td>356.365949552</td><td>2.01841889933</td><td>23.1416456661</td><td>None</td><td>2542694952</td><td>2542694954</td><td>False</td><td>2</td><td>service</td><td>247371551</td><td>1</td><td>2.01841957925</td><td>-64.3691163959</td><td>45.0908576956</td><td>-64.3691350808</td><td>45.0910653947</td><td>-64.3691322799</td><td>45.0910342606</td><td>45.09103311</td><td>-64.36915794</td><td>2016-03-02 17:38:40</td><td>166.848934639</td><td>2016-03-02 17:38:40</td><td>32.2212499875</td><td>45</td><td>-1.28637246974</td><td>1.65780809845</td><td></td><td>service</td><td></td><td></td><td></td></tr>
-<tr><td>14.8047532051</td><td>340.698757115</td><td>5.99144896527</td><td>30.5303607331</td><td>None</td><td>2542694950</td><td>2542694952</td><td>False</td><td>1</td><td>service</td><td>247371551</td><td>1</td><td>5.99143750947</td><td>-64.3689878469</td><td>45.0905985622</td><td>-64.3691163959</td><td>45.0908576956</td><td>-64.3690501828</td><td>45.090724221</td><td>45.09074203</td><td>-64.36897815</td><td>2016-03-02 17:39:15</td><td>124.202860318</td><td>2016-03-02 17:39:15</td><td>35.3100868925</td><td>79</td><td>-2.06725787148</td><td>1.38043172741</td><td></td><td>service</td><td></td><td></td><td></td></tr></table>
+<table><tr><td><strong>alongtrack</strong></td><td><strong>bearing</strong></td><td><strong>dist_from_route</strong></td><td><strong>distance</strong></td><td><strong>name</strong></td><td><strong>node1</strong></td><td><strong>node2</strong></td><td><strong>oneway</strong></td><td><strong>segment</strong></td><td><strong>typetag</strong></td><td><strong>wayid</strong></td><td><strong>weight</strong></td><td><strong>xte</strong></td><td><strong>p1_lon</strong></td><td><strong>p1_lat</strong></td><td><strong>p2_lon</strong></td><td><strong>p2_lat</strong></td><td><strong>pt_onseg_lon</strong></td><td><strong>pt_onseg_lat</strong></td><td><strong>gps_Latitude</strong></td><td><strong>gps_Longitude</strong></td><td><strong>gps_Time (UTC)</strong></td><td><strong>gps__bearing</strong></td><td><strong>gps__datetime</strong></td><td><strong>gps__distance</strong></td><td><strong>gps__original_index</strong></td><td><strong>gps__rotation</strong></td><td><strong>gps__velocity</strong></td><td><strong>waytag_lanes</strong></td><td><strong>waytag_source</strong></td><td><strong>waytag_name</strong></td><td><strong>waytag_surface</strong></td><td><strong>waytag_highway</strong></td></tr>
+<tr><td>2.23854439378</td><td>74.6450684114</td><td>15.8905509385</td><td>3.1957372431</td><td>None</td><td>3624069719</td><td>3624069724</td><td>False</td><td>20</td><td>unclassified</td><td>357012198</td><td>1</td><td>15.8905507538</td><td>-64.3697307537</td><td>45.091637562</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3697032554</td><td>45.0916428929</td><td>45.0917807</td><td>-64.36975685</td><td>2016-03-02 17:37:51</td><td>66.6926429519</td><td>2016-03-02 17:37:51</td><td>nan</td><td>0</td><td>1.92087908237</td><td>1.26275096175</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>0.723006684459</td><td>348.718992698</td><td>6.67381561091</td><td>2.73967742269</td><td>None</td><td>3624069825</td><td>3624069834</td><td>False</td><td>40</td><td>unclassified</td><td>357012198</td><td>1</td><td>6.67381558494</td><td>-64.3693023471</td><td>45.091898403</td><td>-64.3693091743</td><td>45.0919225655</td><td>-64.3693041488</td><td>45.0919047795</td><td>45.09189303</td><td>-64.36938752</td><td>2016-03-02 17:38:16</td><td>114.714620011</td><td>2016-03-02 17:38:16</td><td>31.5687740437</td><td>21</td><td>2.65564234267</td><td>1.25486265933</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>31.0891424822</td><td>341.476092119</td><td>1.59826207608</td><td>38.7551944322</td><td>None</td><td>2542694962</td><td>3624069741</td><td>False</td><td>5</td><td>service</td><td>247371551</td><td>1</td><td>1.59827339691</td><td>-64.3690744445</td><td>45.0913455811</td><td>-64.3692312904</td><td>45.0916760572</td><td>-64.3692002652</td><td>45.0916106867</td><td>45.09160612</td><td>-64.36921957</td><td>2016-03-02 17:38:28</td><td>164.951409631</td><td>2016-03-02 17:38:28</td><td>34.5198996316</td><td>33</td><td>3.20753363665</td><td>3.45601032391</td><td></td><td></td><td></td><td></td><td>service</td></tr>
+<tr><td>-0.0</td><td>341.476092119</td><td>7.94447404041</td><td>38.7551944322</td><td>None</td><td>2542694962</td><td>3624069741</td><td>False</td><td>5</td><td>service</td><td>247371551</td><td>1</td><td>7.94445882325</td><td>-64.3690744445</td><td>45.0913455811</td><td>-64.3692312904</td><td>45.0916760572</td><td>-64.3690744445</td><td>45.0913455811</td><td>45.09132275</td><td>-64.36917034</td><td>2016-03-02 17:38:35</td><td>175.657759108</td><td>2016-03-02 17:38:35</td><td>31.7454619601</td><td>40</td><td>0.158127083996</td><td>5.32494236069</td><td></td><td></td><td></td><td></td><td>service</td></tr>
+<tr><td>19.6727191847</td><td>356.365949552</td><td>2.01841889933</td><td>23.1416456661</td><td>None</td><td>2542694952</td><td>2542694954</td><td>False</td><td>2</td><td>service</td><td>247371551</td><td>1</td><td>2.01841957925</td><td>-64.3691163959</td><td>45.0908576956</td><td>-64.3691350808</td><td>45.0910653947</td><td>-64.3691322799</td><td>45.0910342606</td><td>45.09103311</td><td>-64.36915794</td><td>2016-03-02 17:38:40</td><td>166.848934639</td><td>2016-03-02 17:38:40</td><td>32.2212499875</td><td>45</td><td>-1.28637246974</td><td>1.65780809845</td><td></td><td></td><td></td><td></td><td>service</td></tr>
+<tr><td>14.8047532051</td><td>340.698757115</td><td>5.99144896527</td><td>30.5303607331</td><td>None</td><td>2542694950</td><td>2542694952</td><td>False</td><td>1</td><td>service</td><td>247371551</td><td>1</td><td>5.99143750947</td><td>-64.3689878469</td><td>45.0905985622</td><td>-64.3691163959</td><td>45.0908576956</td><td>-64.3690501828</td><td>45.090724221</td><td>45.09074203</td><td>-64.36897815</td><td>2016-03-02 17:39:15</td><td>124.202860318</td><td>2016-03-02 17:39:15</td><td>35.3100868925</td><td>79</td><td>-2.06725787148</td><td>1.38043172741</td><td></td><td></td><td></td><td></td><td>service</td></tr></table>
 
 
 
@@ -381,13 +400,13 @@ segs.head()
 
 
 
-<table><tr><td><strong>wayid</strong></td><td><strong>segment</strong></td><td><strong>node1</strong></td><td><strong>node2</strong></td><td><strong>typetag</strong></td><td><strong>name</strong></td><td><strong>distance</strong></td><td><strong>bearing</strong></td><td><strong>p1_lon</strong></td><td><strong>p1_lat</strong></td><td><strong>p2_lon</strong></td><td><strong>p2_lat</strong></td><td><strong>direction</strong></td><td><strong>waytag_surface</strong></td><td><strong>waytag_highway</strong></td><td><strong>waytag_source</strong></td><td><strong>waytag_name</strong></td><td><strong>waytag_lanes</strong></td></tr>
-<tr><td>357012198</td><td>20</td><td>3624069719</td><td>3624069724</td><td>unclassified</td><td>None</td><td>3.1957372431</td><td>74.6450684114</td><td>-64.3697307537</td><td>45.091637562</td><td>-64.3696914973</td><td>45.0916451723</td><td>1</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>357012198</td><td>21</td><td>3624069724</td><td>3624069728</td><td>unclassified</td><td>None</td><td>3.1726935802</td><td>76.2417253587</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3696522409</td><td>45.0916519581</td><td>1</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>357012198</td><td>22</td><td>3624069728</td><td>3624069731</td><td>unclassified</td><td>None</td><td>3.1994999765</td><td>74.4015176906</td><td>-64.3696522409</td><td>45.0916519581</td><td>-64.3696129845</td><td>45.0916596952</td><td>1</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>357012198</td><td>23</td><td>3624069731</td><td>3624069735</td><td>unclassified</td><td>None</td><td>3.1889364185</td><td>74.6115184091</td><td>-64.3696129845</td><td>45.0916596952</td><td>-64.369573818</td><td>45.0916673055</td><td>1</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>357012198</td><td>24</td><td>3624069735</td><td>3624069740</td><td>unclassified</td><td>None</td><td>3.19081452708</td><td>74.4894312542</td><td>-64.369573818</td><td>45.0916673055</td><td>-64.3695346515</td><td>45.0916749791</td><td>1</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr>
-<tr><td>357012198</td><td>25</td><td>3624069740</td><td>3624069743</td><td>unclassified</td><td>None</td><td>3.32184257816</td><td>73.2191900744</td><td>-64.3695346515</td><td>45.0916749791</td><td>-64.3694941374</td><td>45.0916836041</td><td>1</td><td>paved</td><td>unclassified</td><td>NRCan-CanVec-10.0</td><td></td><td>2</td></tr></table>
+<table><tr><td><strong>wayid</strong></td><td><strong>segment</strong></td><td><strong>node1</strong></td><td><strong>node2</strong></td><td><strong>typetag</strong></td><td><strong>name</strong></td><td><strong>distance</strong></td><td><strong>bearing</strong></td><td><strong>p1_lon</strong></td><td><strong>p1_lat</strong></td><td><strong>p2_lon</strong></td><td><strong>p2_lat</strong></td><td><strong>direction</strong></td><td><strong>waytag_lanes</strong></td><td><strong>waytag_source</strong></td><td><strong>waytag_name</strong></td><td><strong>waytag_surface</strong></td><td><strong>waytag_highway</strong></td></tr>
+<tr><td>357012198</td><td>20</td><td>3624069719</td><td>3624069724</td><td>unclassified</td><td>None</td><td>3.1957372431</td><td>74.6450684114</td><td>-64.3697307537</td><td>45.091637562</td><td>-64.3696914973</td><td>45.0916451723</td><td>1</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>357012198</td><td>21</td><td>3624069724</td><td>3624069728</td><td>unclassified</td><td>None</td><td>3.1726935802</td><td>76.2417253587</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3696522409</td><td>45.0916519581</td><td>1</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>357012198</td><td>22</td><td>3624069728</td><td>3624069731</td><td>unclassified</td><td>None</td><td>3.1994999765</td><td>74.4015176906</td><td>-64.3696522409</td><td>45.0916519581</td><td>-64.3696129845</td><td>45.0916596952</td><td>1</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>357012198</td><td>23</td><td>3624069731</td><td>3624069735</td><td>unclassified</td><td>None</td><td>3.1889364185</td><td>74.6115184091</td><td>-64.3696129845</td><td>45.0916596952</td><td>-64.369573818</td><td>45.0916673055</td><td>1</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>357012198</td><td>24</td><td>3624069735</td><td>3624069740</td><td>unclassified</td><td>None</td><td>3.19081452708</td><td>74.4894312542</td><td>-64.369573818</td><td>45.0916673055</td><td>-64.3695346515</td><td>45.0916749791</td><td>1</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr>
+<tr><td>357012198</td><td>25</td><td>3624069740</td><td>3624069743</td><td>unclassified</td><td>None</td><td>3.32184257816</td><td>73.2191900744</td><td>-64.3695346515</td><td>45.0916749791</td><td>-64.3694941374</td><td>45.0916836041</td><td>1</td><td>2</td><td>NRCan-CanVec-10.0</td><td></td><td>paved</td><td>unclassified</td></tr></table>
 
 
 
@@ -439,10 +458,6 @@ osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_date
 **points_summary**: True if the list of point/segment matches should be returned, False otherwise.
 
 **segments_summary**: True if the complete list of segments should be returned, False otherwise.
-
-## Disconnect from the database!
-
-Don't forget!
 
 
 ```python
