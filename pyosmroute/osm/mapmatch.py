@@ -371,6 +371,5 @@ def _summary_statistics(df, output=None, **stats):
     if output is None:
         output = {}
     for name, stat in stats.items():
-       output[name] = stat[0](df[stat[1]])
+        output[name] = stat[0](df[stat[1]])
     return output
-
