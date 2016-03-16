@@ -15,6 +15,17 @@ def _coorditer(numpyarray):
             break
 
 
+def _unravel_index(k, shape):
+    # pypy does not implement np.unravel_index(index, shape)
+    if len(shape) == 1:
+        return (k,)
+    elif len(shape) == 2:
+        ncol = shape[1]
+        return k/ncol, k%ncol
+    else:
+        raise NotImplementedError("Custom _unravel_index not available for shape > 2 dimensions")
+
+
 class HiddenMarkovModel(object):
     """
     A pure python implementation of a Hidden Markov Model to find the most likely
@@ -70,7 +81,8 @@ class HiddenMarkovModel(object):
                 path.append((None, 0))
                 log("Unresolvable break in viterbi at t=%s" % t)
             else:
-                minind = np.unravel_index(probs.argmax(), probs.shape)
+                # minind = np.unravel_index(probs.argmax(), probs.shape)
+                minind = _unravel_index(probs.argmax(), probs.shape)
                 path.append((minind[0], probs[minind]))
 
         return path
@@ -84,8 +96,8 @@ class HiddenMarkovModel(object):
         :param lookahead: The number of steps to look ahead
         :return: An n-dimentional array such that probs[t][t+1][t+2]...[t+lookahead] = the probability to be maximized
         """
-        eprobs = np.array([self.eprobs[t0+plust] for plust in range(lookahead+1)])  # list of length lookahead
-        probs = np.ndarray([len(subeprobs) for subeprobs in eprobs], dtype=float)
+        eprobs = [self.eprobs[t0+plust] for plust in range(lookahead+1)] # list of length lookahead
+        probs = np.ndarray(shape=[len(subeprobs) for subeprobs in eprobs], dtype=float)
         for index in _coorditer(probs):
             prob = 1
             for plust, j in enumerate(index):

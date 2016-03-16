@@ -29,7 +29,7 @@ def nearest_road(db, radius, *points):
 
 def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_datetime_col=0,
              searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, beta=10.0, maxiter=1,
-             minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=0,
+             minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=1,
              lazy_probabilities=True, points_summary=True, segments_summary=True):
     """
     Match timestamped GPS points to roads in the OSM database. The matching is based a Hidden Markov Model
