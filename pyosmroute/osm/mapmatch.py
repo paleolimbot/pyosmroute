@@ -29,7 +29,7 @@ def nearest_road(db, radius, *points):
 
 def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_datetime_col=0,
              searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, beta=10.0, maxiter=1,
-             minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=1,
+             minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=0,
              lazy_probabilities=True, points_summary=True, segments_summary=True):
     """
     Match timestamped GPS points to roads in the OSM database. The matching is based a Hidden Markov Model
@@ -89,17 +89,17 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
                 match to be reconstructed.
     """
 
-    tstart = time.time()
     log("Starting map matching")
-
-    # add indicies so we can keep track of original observation indicies
-    gpsdf["_original_index"] = [i for i in range(len(gpsdf))]
+    t_start = time.time()
 
     log("Cleaning data...")
+    # add indicies so we can keep track of original observation indicies
+    gpsdf["_original_index"] = [i for i in range(len(gpsdf))]
     if "_datetime" not in gpsdf:
         gpsdf["_datetime"] = gpsclean.datetimes(gpsdf, unparsed_col=unparsed_datetime_col)
     cleaned = gpsclean.cleanpoints(gpsdf, min_distance=minpointdistance, min_velocity=None, lat_column=lat_column,
                                    lon_column=lon_column)
+    t_cleaned = time.time()
 
     log("Calculating velocities and directions...")
     cleaned["_velocity"] = gpsclean.velocities(cleaned, nwindow=paramter_window, lat_col=lat_column, lon_col=lon_column)
@@ -109,7 +109,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
 
     if len(cleaned) < minpoints:
         log("Too few points to perform matching (%s)" % len(gpsdf))
-        return {"result": "not enough points"}, DataFrame(), DataFrame()
+        return {"result": "not_enough_points"}, DataFrame(), DataFrame()
 
     # at least have output columns have a standard name
     if "Latitude" not in cleaned or "Longitude" not in cleaned:
@@ -120,15 +120,18 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
 
     # from now on, don't refer to gps data frame, just the gps points (list of dicts)
     gpspoints = [cleaned.iloc[i] for i in range(len(cleaned))]
+    t_velocity_direction = time.time()
 
     log("Fetching all possible ways within radius %s..." % searchradius)
     ways = [db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius) for p in gpspoints]
+    t_fetchways = time.time()
 
     log("Building in-memory cache...")
     cache = OSMCache(db)
     idlist = set([item for sublist in ways for item in sublist])
     cache.addways(*idlist)  # best done like this so there is only one query to the database
     log("Loaded %s nodes and %s ways with %s links" % (len(cache.nodes), len(cache.ways), len(cache.routing)))
+    t_cache = time.time()
 
     log("Calculating emission probabilities...")
     # 'score' how well each set of observations matches up with each row of the data frame of possible ways
@@ -152,6 +155,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     if not states:
         log("No matches found for points. There is likely no roads data available for this location.")
         return {"result": "no matches"}, DataFrame(), DataFrame()
+    t_eprobs = time.time()
 
     log("Calculating transition probabilities...")
     tpdict = None
@@ -210,13 +214,20 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
 
     assert len(pathsegs) == len(path) == len(nodes) == len(gpspoints)
 
-    telapsed = time.time() - tstart
+    t_tprobshmm = time.time()
+    telapsed = t_tprobshmm - t_start
 
     # general summary stats
     stats = {
         "result": "ok",
-        "started": time.strftime("%Y-%m-%d %H:%M:%S +0000", time.gmtime(tstart)),
-        "match_time": telapsed,
+        "started": time.strftime("%Y-%m-%d %H:%M:%S +0000", time.gmtime(t_start)),
+        "t_total": telapsed,
+        "t_cleaned": t_cleaned - t_start,
+        "t_velocity_direction": t_velocity_direction - t_cleaned,
+        "t_fetchways": t_fetchways - t_velocity_direction,
+        "t_cache": t_cache - t_fetchways,
+        "t_eprobs": t_eprobs - t_cache,
+        "t_hmm": t_tprobshmm - t_eprobs,
         "in_points": len(gpsdf),
         "cleaned_points": len(cleaned),
         "matched_points": len(gpspoints),
@@ -246,8 +257,8 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
                                                     "node1", "node2", "missingnodes"))
         tripsummary = DataFrame()  # makes output types at least consistent
 
-    summarytime = time.time() - tstart - telapsed
-    stats["summary_time"] = summarytime
+    summarytime = time.time() - t_start - telapsed
+    stats["t_summary"] = summarytime
 
     log("Done: %s points in %0.1f sec (%d points/sec) matching, %0.1f sec summary" %
         (len(cleaned), telapsed, len(cleaned) / telapsed, summarytime))
