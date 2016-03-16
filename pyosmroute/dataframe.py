@@ -387,6 +387,7 @@ class DataFrame(object):
             keys = set()
             for dict in list_of_dicts:
                 keys = keys.union(set(dict.keys()))
+            keys = list(sorted(keys))
         df = DataFrame()
         for key in keys:
             df[key] = [d[key] if key in d else no_value for d in list_of_dicts]

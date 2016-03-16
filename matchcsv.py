@@ -1,6 +1,8 @@
 
 import os
 import sys
+import json
+import time
 import pyosmroute as pyosm
 
 
@@ -57,6 +59,7 @@ if __name__ == "__main__":
                                        " and Longitude columns.")
     parser.add_argument("-r", "--recursive", help="Walk directory recursively", action="store_true", default=False)
     parser.add_argument("-o", "--output", help="Specify summary output file, use '.csv' or '.tsv' extension.")
+    parser.add_argument("--outcols", nargs="*", help="Specify which summary columns to write.", default=None)
     parser.add_argument("--writepoints", help="Write point matches to FILE_osmpoints.csv",
                         action="store_true", default=False)
     parser.add_argument("--writesegs", help="Write all segment matches to FILE_osmsegs.csv",
@@ -65,6 +68,10 @@ if __name__ == "__main__":
     parser.add_argument("--chunksize", help="Specify the multiprocesing chunksize parameter.", type=int, default=10)
     parser.add_argument("-v", "--verbose", help="Verbose debug output.",
                         action="store_true", default=False)
+    parser.add_argument("--matchargs", help="Arguments to pass to the matching algorithm as a JSON string.",
+                        default="{}")
+    parser.add_argument("-n", help="Specifiy the number of times to repeat the matching (useful for speed tests)",
+                        default=1, type=int)
 
     args = parser.parse_args()
     if args.verbose:
@@ -72,17 +79,19 @@ if __name__ == "__main__":
 
     csvfiles = []
     if os.path.isfile(args.infile):
-        csvfiles.append(args.infile)
+        csvfiles = [args.infile for i in range(args.n)]
     elif os.path.isdir(args.infile):
         if args.recursive:
             for root, dirs, files in os.walk(args.infile):
                 for file in files:
                     if file.endswith(".csv"):
-                        csvfiles.append(os.path.join(root, file))
+                        for i in range(args.n):
+                            csvfiles.append(os.path.join(root, file))
         else:
             for file in os.listdir(args.infile):
                 if file.endswith(".csv"):
-                    csvfiles.append(os.path.join(args.infile, file))
+                    for i in range(args.n):
+                        csvfiles.append(os.path.join(args.infile, file))
 
     else:
         pyosm.log("%s is not a file or directory" % args.infile)
@@ -92,8 +101,17 @@ if __name__ == "__main__":
         pyosm.log("No trips found, nothing to do (exiting)")
         sys.exit(0)
 
-    matchargs = {} # add these to commandline someday?
+    try:
+        matchargs = json.loads(args.matchargs)
+    except ValueError:
+        try:
+            matchargs = json.loads(args.matchargs.replace("'", '"'))
+        except ValueError as e:
+            pyosm.log("Invalid matchargs string: %s (%s)" % (args.matchargs, e))
+            sys.exit(2)
     dbargs = {} # add these to commandline someday?
+
+    tstart = time.time()
 
     if args.processes > 1 and args.chunksize <= len(csvfiles):
         from multiprocessing import Pool
@@ -102,10 +120,15 @@ if __name__ == "__main__":
         with Pool(args.processes) as p:
             res = list(p.starmap(matchcsv, processargs))
             res = [item for sublist in res for item in sublist]
-            summary = pyosm.DataFrame.from_dict_list(res, no_value="")
+            summary = pyosm.DataFrame.from_dict_list(res, no_value="", keys=args.outcols)
     else:
         summary = pyosm.DataFrame.from_dict_list(matchcsv(csvfiles, matchargs, dbargs,
-                                                           args.writepoints, args.writesegs), no_value="")
+                                                          args.writepoints, args.writesegs), no_value="",
+                                                 keys=args.outcols)
+
+    telapsed = time.time() - tstart
+    pyosm.log("Matched %s trips in %0.1f secs (%0.1f secs / trip)" % (len(csvfiles),
+                                                                      telapsed, telapsed / len(csvfiles)))
 
     if args.output:
         summary.to_csv(args.output)
