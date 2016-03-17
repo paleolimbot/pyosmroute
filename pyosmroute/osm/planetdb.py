@@ -9,7 +9,7 @@ _ll = osr.SpatialReference()
 _ll.ImportFromEPSG(4326)
 
 _smerc = osr.SpatialReference()
-_smerc.ImportFromEPSG(900913)
+_smerc.ImportFromEPSG(3857)
 
 _project_t = osr.CoordinateTransformation(_ll, _smerc)
 _unproject_t = osr.CoordinateTransformation(_smerc, _ll)
