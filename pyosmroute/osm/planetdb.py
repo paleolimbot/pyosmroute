@@ -1,6 +1,30 @@
 
+from osgeo import ogr
+from osgeo import osr
+
 from ..dbinterface import GenericDB, asdataframe
-from ..logger import log
+
+
+_ll = osr.SpatialReference()
+_ll.ImportFromEPSG(4326)
+
+_smerc = osr.SpatialReference()
+_smerc.ImportFromEPSG(900913)
+
+_project_t = osr.CoordinateTransformation(_ll, _smerc)
+_unproject_t = osr.CoordinateTransformation(_smerc, _ll)
+
+
+def _project(ptin):
+    pt = ogr.CreateGeometryFromWkt("POINT (%s %s)" % ptin)
+    pt.Transform(_project_t)
+    return pt.GetX(), pt.GetY()
+
+
+def _unproject(ptin):
+    pt = ogr.CreateGeometryFromWkt("POINT (%s %s)" % ptin)
+    pt.Transform(_unproject_t)
+    return pt.GetX(), pt.GetY()
 
 
 class PlanetDB(GenericDB):
@@ -12,28 +36,6 @@ class PlanetDB(GenericDB):
     def __init__(self, host, username, password, dbname):
         super(PlanetDB, self).__init__(host, username, password, dbname)
 
-    def _transform(self, x, y, fromepsg, toepsg, parse=False):
-        # SELECT ST_AsText(ST_Transform(ST_GeomFromText('POINT(8764554.20 3695679.11)', 3857), 4326))
-        with self.cursor() as cur:
-            cur.execute("""SELECT ST_AsText(ST_Transform(ST_GeomFromText('POINT(%s %s)', %s), %s))""" %
-                        (x, y, fromepsg, toepsg))
-            ptext = cur.fetchone()[0]
-            if parse:
-                try:
-                    parts = ptext.replace("POINT(", "").replace(")", "").split()
-                    return float(parts[0]), float(parts[1])
-                except:
-                    log("Error converting string to point: %s" % ptext)
-                    return float("nan"), float("nan")
-            else:
-                return ptext
-
-    def unproject(self, x, y, parse=True):
-        return self._transform(x, y, 900913, 4326, parse=parse)
-
-    def project(self, lon, lat, parse=True):
-        return self._transform(lon, lat, 4326, 900913, parse=parse)
-
     def nodes(self, *nodeids):
         """
         Get node information according to node ids. Order is not considered between
@@ -43,13 +45,15 @@ class PlanetDB(GenericDB):
         :return: A DataFrame with columns id, lon, lat, and tags.
         """
         arg = " OR ".join("id=%s" % id for id in nodeids)
+        if not arg:
+            arg = "FALSE"
         with self.cursor() as cur:
-            cur.execute("""SELECT id, CAST(lat/100.0 AS FLOAT) as lat, CAST(lon/100.0 AS FLOAT) as lon, tags
+            cur.execute("""SELECT id, lat/1e2 as lat, lon/1e2 as lon, tags
                     FROM planet_osm_nodes WHERE %s""" % arg)
             out = asdataframe(cur)
             if len(out) > 0:
                 # convert points to lat/lon
-                newpoints = [self.unproject(out["lon"][i], out["lat"][i]) for i in range(len(out))]
+                newpoints = [_unproject((out["lon"][i], out["lat"][i])) for i in range(len(out))]
                 newpoints = list(zip(*newpoints))
                 out["lon"] = newpoints[0]
                 out["lat"] = newpoints[1]
@@ -89,19 +93,21 @@ class PlanetDB(GenericDB):
         :param radius: The radius to consider
         :return: A list of wayids
         """
-        pt = self.project(lon, lat, parse=False)
+
+        pt = "%s, %s" % _project((lon, lat))
+
         with self.cursor() as cur:
             cur.execute(
-                """SELECT osm_id, ST_Distance(way, ST_GeomFromText('%s', 900913)) as distance
+                """SELECT osm_id, ST_Distance(way, ST_SetSRID(ST_MakePoint(%s), 900913)) as distance
                 FROM planet_osm_line WHERE
-                ST_DWithin(way, ST_GeomFromText('%s', 900913), %s) AND
+                ST_DWithin(way, ST_SetSRID(ST_MakePoint(%s),900913), %s) AND
                 highway IS NOT NULL
                 AND (highway != 'cycleway'
                 AND highway != 'footway'
                 AND highway != 'bridleway'
                 AND highway != 'steps'
                 AND highway != 'path')
-                ORDER BY ST_Distance(way, ST_GeomFromText('%s', 900913))""" %
+                ORDER BY ST_Distance(way, ST_SetSRID(ST_MakePoint(%s), 900913))""" %
                 (pt, pt, radius, pt))
             tup = cur.fetchall()
             if tup:  # not using the 'distance' item yet since XTE is calculated later
