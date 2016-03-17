@@ -83,7 +83,7 @@ class HiddenMarkovModel(object):
             else:
                 # minind = np.unravel_index(probs.argmax(), probs.shape)
                 minind = _unravel_index(probs.argmax(), probs.shape)
-                path.append((minind[0], probs[minind]))
+                path.append((int(minind[0]), probs[minind]))
 
         return path
 
@@ -102,7 +102,7 @@ class HiddenMarkovModel(object):
             prob = 1
             for plust, j in enumerate(index):
                 t = t0 + plust - 1
-                i = index[plust-1] if plust != 0 else prev_i
+                i = int(index[plust-1] if plust != 0 else prev_i)
                 tprob = self.tprobs[t, i, j]
                 eprob = eprobs[plust][j]
                 prob *= tprob * eprob
