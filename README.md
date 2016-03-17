@@ -3,7 +3,9 @@
 
 ## Installation
 
-The Python package `pyosmroute` depends on two Python modules: `numpy` and `psycopg2` (when using `pypy` the appropriate package is `psycopg2cffi`). All are available via `pip` except `numpy` for `pypy`, which requires [special instructions](http://pypy.org/download.html#installing-numpy). The interface to the `pyosmroute` package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are also provided
+The Python package `pyosmroute` depends on two Python modules: `numpy` and `psycopg2` (when using `pypy` the appropriate package is `psycopg2cffi`). All are available via `pip` except `numpy` for `pypy`, which requires [special instructions](http://pypy.org/download.html#installing-numpy). The interface to the `pyosmroute` package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are also provided.
+
+**Note:** The if `pyproj` or `gdal` packages are installed, the algorithm runs significantly faster since a query to the database isn't *really* necessary to project/unproject points, it just makes the dependencies easier. Neither of these packages appear to work for `pypy` that I've found so far.
 
 ### Setting up the OSM Database
 
@@ -25,7 +27,7 @@ For the purpose of base testing, a pbf of Kings County in Nova Scotia is include
 osm2pgsql -s -C 1600 -H localhost -d DB_name -U DB_user -W example-data/osm_ns/kings_cty.pbf
 ```
 
-The most important argument is the **-s** parameter, which leaves a copy of the raw nodes/ways in the database. This data is used by the routing and matching function extensively. The **-C** parameter just specifies an amount of memory to be used (in MB). The **-W** parameter prompts for a password, so it may be desirable to have no password on this database for the preparation phase. Note that the database is loaded in **EPSG:900913**. It would be more efficient to have this be in **EPSG:4326** (probably), but ensuring the **-s** tables and the PostGIS spatial indexes are synchronized is essential.
+The most important argument is the **-s** parameter, which leaves a copy of the raw nodes/ways in the database. This data is used by the routing and matching function extensively. The **-C** parameter just specifies an amount of memory to be used (in MB). The **-W** parameter prompts for a password, so it may be desirable to have no password on this database for the preparation phase. Note that the database is loaded in **EPSG:900913**. It is not more efficient to have this be in **EPSG:4326** since the PostGIS `ST_DWithin()` function runs much faster on geometries than geographies. At some point in the future it may be worth converting the `lat` and `lon` columns in the `planet_osm_nodes` table because these are not used by PostGIS.
 
 
 ## From the Command Line
