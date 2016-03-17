@@ -21,29 +21,30 @@ def matchcsv(csvfiles, matchargs, dbargs=None, outpoints=False, outsegs=False):
     if dbargs is None:
         dbargs = {}
     db = pyosm.get_planet_db(**dbargs)
-    db.connect()
+    if not db.connect():
+        pyosm.log("Error connecting to database!")
+        return []
     allstats = []
-    with db.conn:
-        for csvfile in csvfiles:
-            pyosm.log("Processing CSV: %s" % csvfile)
-            try:
-                with open(csvfile) as f:
-                    firstline = f.readline()
-                    if firstline.strip() == "RawGPS":  # is regular trip
-                        headers = True
-                    else: # is a chris processed trip
-                        headers = False
-                df = pyosm.read_csv(csvfile, driver="csv", headers=headers, skiprows=1)
-                stats, points, segs = pyosm.osmmatch(db, df, lon_column=2, lat_column=1, unparsed_datetime_col=0)
-                stats["_csv_file"] = csvfile
-                allstats.append(stats)
-                if outpoints and points:
-                    points.to_csv(csvfile[:-4] + "_osmpoints.csv")
-                if outsegs and segs:
-                    segs.to_csv(csvfile[:-4] + "_osmsegs.csv")
-            except Exception as e:
-                pyosm.log("Could not process trip %s: %s" % (csvfile, e), stacktrace=True)
-                allstats.append({'_csv_file': csvfile, 'result': type(e).__name__})
+    for csvfile in csvfiles:
+        pyosm.log("Processing CSV: %s" % csvfile)
+        try:
+            with open(csvfile) as f:
+                firstline = f.readline()
+                if firstline.strip() == "RawGPS":  # is regular trip
+                    headers = True
+                else: # is a chris processed trip
+                    headers = False
+            df = pyosm.read_csv(csvfile, driver="csv", headers=headers, skiprows=1)
+            stats, points, segs = pyosm.osmmatch(db, df, lon_column=2, lat_column=1, unparsed_datetime_col=0)
+            stats["_csv_file"] = csvfile
+            allstats.append(stats)
+            if outpoints and points:
+                points.to_csv(csvfile[:-4] + "_osmpoints.csv")
+            if outsegs and segs:
+                segs.to_csv(csvfile[:-4] + "_osmsegs.csv")
+        except Exception as e:
+            pyosm.log("Could not process trip %s: %s" % (csvfile, e), stacktrace=True)
+            allstats.append({'_csv_file': csvfile, 'result': type(e).__name__})
     db.disconnect() # already taken care of by context manager, but might as well
     return allstats
 

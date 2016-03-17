@@ -63,11 +63,11 @@ test <- function() {
   }
 }
 
-matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android_start.csv")
+matchtrip("example-data/test/2016-03-02 17_39_46_Bus_Android.csv.csv")
 
 # check pypy
 matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
-          interpreter = "/Users/dewey/d/build/pypy-5.0.0-osx64/bin/pypy")
+          interpreter = "../pypy-5.0.0-linux64/bin/pypy")
 
 matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
           interpreter = "python3")
