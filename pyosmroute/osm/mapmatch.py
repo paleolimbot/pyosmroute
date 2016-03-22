@@ -1,6 +1,7 @@
 import time
 
 import numpy as np
+from gevent.pool import Pool
 
 from pyosmroute import gpsclean
 from ._hiddenmarkovmodel import HiddenMarkovModel
@@ -30,7 +31,7 @@ def nearest_road(db, radius, *points):
 def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_datetime_col=0,
              searchradius=50, minpoints=10, maxvel=250, sigmaZ=10, beta=10.0, maxiter=1,
              minpointdistance=30, paramter_window=3, bearing_penalty_weight=1, viterbi_lookahead=1,
-             lazy_probabilities=True, points_summary=True, segments_summary=True):
+             lazy_probabilities=True, points_summary=True, segments_summary=True, db_threads=20):
     """
     Match timestamped GPS points to roads in the OSM database. The matching is based a Hidden Markov Model
     with emission probabilities based on the distance to the road segment, and transition probabilities
@@ -83,6 +84,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
                                probabilties are used, so this does not lead to a performance increase.
     :param points_summary: True if the list of point/segment matches should be returned, False otherwise.
     :param segments_summary: True if the complete list of segments should be returned, False otherwise.
+    :param db_threads: Number of threads to execute synchronous queries.
     :return: A 3-tuple. The first item is a dictionary containing summary statistics about the match, the second
                 item is the points_summary, the third item is the segments_summary. If both points_summary
                 and segments_summary are False, the function returns an output that allows the complete
@@ -123,7 +125,11 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     t_velocity_direction = time.time()
 
     log("Fetching all possible ways within radius %s..." % searchradius)
-    ways = [db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius) for p in gpspoints]
+    tp = Pool(db_threads if db_threads else len(gpspoints))
+    ways = list(tp.imap(db.nearest_ways, cleaned["Longitude"], cleaned["Latitude"],
+                        np.repeat(searchradius, len(gpspoints))))
+
+    #ways = [db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius) for p in gpspoints]
     t_fetchways = time.time()
 
     log("Building in-memory cache...")

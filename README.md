@@ -3,7 +3,7 @@
 
 ## Installation
 
-The Python package `pyosmroute` depends on two Python modules: `numpy` and `psycopg2` (when using `pypy` the appropriate package is `psycopg2cffi`). All are available via `pip` except `numpy` for `pypy`, which requires [special instructions](http://pypy.org/download.html#installing-numpy). The interface to the `pyosmroute` package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are also provided.
+The Python package `pyosmroute` depends on the Python modules: `numpy`, `gevent` and `psycopg2` (when using `pypy` the appropriate package is `psycopg2cffi`). All are available via `pip` except `numpy` for `pypy`, which requires [special instructions](http://pypy.org/download.html#installing-numpy). The interface to the `pyosmroute` package is the package itself, imported like any Python module, but for debugging it is usually easier to use the command line or R interfaces that are also provided.
 
 **Note:** The if `pyproj` or `gdal` packages are installed, the algorithm runs significantly faster since a query to the database isn't *really* necessary to project/unproject points, it just makes the dependencies easier. Neither of these packages appear to work for `pypy` that I've found so far.
 
