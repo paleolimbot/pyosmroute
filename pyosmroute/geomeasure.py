@@ -1,5 +1,5 @@
 
-from math import sin, cos, atan2, sqrt, radians, degrees, acos, asin
+from math import sin, cos, atan2, sqrt, radians, degrees, acos, asin, log, pi, atan, exp, tan
 
 
 def _radius(p1, p2, ellipsoid):
@@ -82,6 +82,13 @@ def along_track_distance(p1, p2, p3, ellipsoid=None):
     angle = abs(bearing_difference(bearing_to(p1, p2), bearing_to(p1, p3)))
     return result if angle <= 90 else -result
 
+
+def sm_project(pt):
+    return 6378137.0*radians(pt[0]), log(tan(pi/4.0+pt[1]*(pi/180.0)/2.0)) * 6378137.0
+
+
+def sm_unproject(pt):
+    return degrees(pt[0]/6378137.0), degrees(2.0*atan(exp(pt[1]/6378137.0))-pi/2.0)
 
 if __name__ == "__main__":
     # test
