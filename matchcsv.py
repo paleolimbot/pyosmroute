@@ -6,7 +6,7 @@ import time
 import pyosmroute as pyosm
 
 
-def matchcsv(csvfiles, matchargs, dbargs=None, outpoints=False, outsegs=False):
+def matchcsv(csvfiles, matchargs, dbargs=None, outpoints=False, outsegs=False, outlines=False):
     """
     Do matching on a list of CSV files.
 
@@ -42,6 +42,9 @@ def matchcsv(csvfiles, matchargs, dbargs=None, outpoints=False, outsegs=False):
                 points.to_csv(csvfile[:-4] + "_osmpoints.csv")
             if outsegs and segs:
                 segs.to_csv(csvfile[:-4] + "_osmsegs.csv")
+            if outlines:
+                with open(csvfile[:-4] + "_osmlines.json", "w") as f:
+                    json.dump(pyosm.make_linestring(segs), f)
         except Exception as e:
             pyosm.log("Could not process trip %s: %s" % (csvfile, e), stacktrace=True)
             allstats.append({'_csv_file': csvfile, 'result': type(e).__name__})
@@ -64,6 +67,8 @@ if __name__ == "__main__":
     parser.add_argument("--writepoints", help="Write point matches to FILE_osmpoints.csv",
                         action="store_true", default=False)
     parser.add_argument("--writesegs", help="Write all segment matches to FILE_osmsegs.csv",
+                        action="store_true", default=False)
+    parser.add_argument("--writelines", help="Write all segment matches to FILE_osmlines.json",
                         action="store_true", default=False)
     parser.add_argument("--processes", help="Specify number of worker processes.", type=int, default=1)
     parser.add_argument("--chunksize", help="Specify the multiprocesing chunksize parameter.", type=int, default=10)
@@ -117,14 +122,15 @@ if __name__ == "__main__":
     if args.processes > 1 and args.chunksize <= len(csvfiles):
         from multiprocessing import Pool
         csvchunks  = [csvfiles[i:i+args.chunksize] for i in range(0, len(csvfiles), args.chunksize)]
-        processargs = [(chunk, matchargs, dbargs, args.writepoints, args.writesegs) for chunk in csvchunks]
+        processargs = [(chunk, matchargs, dbargs, args.writepoints, args.writesegs, args.writelines) for chunk in csvchunks]
         with Pool(args.processes) as p:
             res = list(p.starmap(matchcsv, processargs))
             res = [item for sublist in res for item in sublist]
             summary = pyosm.DataFrame.from_dict_list(res, no_value="", keys=args.outcols)
     else:
         summary = pyosm.DataFrame.from_dict_list(matchcsv(csvfiles, matchargs, dbargs,
-                                                          args.writepoints, args.writesegs), no_value="",
+                                                          args.writepoints, args.writesegs, args.writelines),
+                                                 no_value="",
                                                  keys=args.outcols)
 
     telapsed = time.time() - tstart

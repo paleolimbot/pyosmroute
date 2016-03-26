@@ -271,6 +271,26 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     return stats, summary, tripsummary
 
 
+def make_linestring(segsoutput):
+    """
+    Make a dict of the linestring represented by the segments output (useful for passing to json to
+    create a mappable version of this in some JS mapping api).
+
+    :param segsoutput: Output as created by osmmatch()
+    :return: A dict with elements "lon" and "lat"
+    """
+
+    # remove ambiguous direction strings
+    segsoutput = segsoutput.iloc[segsoutput["direction"] != 0, :]
+    lon = []
+    lat = []
+    lon.append(segsoutput["p1_lon"][0])
+    lat.append(segsoutput["p1_lat"][0])
+    for i in range(len(segsoutput)):
+        lon.append(segsoutput["p2_lon"][i])
+        lat.append(segsoutput["p2_lat"][i])
+    return {"lon": lon, "lat": lat}
+
 def _points_summary(cache, gpspoints, pathsegs):
 
     keys = list(sorted(pathsegs[0].keys()))
@@ -384,7 +404,8 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
     tripsummary["segment"] = tripsummary["segment"].astype(int)
 
     # subset to not include segments with multiple direction matches
-    return tripsummary.iloc[tripsummary["direction"] != 0, :]
+    return tripsummary
+
 
 
 def _summary_statistics(df, output=None, **stats):

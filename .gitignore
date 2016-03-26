@@ -8,6 +8,7 @@
 __pycache__
 *_osmsegs.csv
 *_osmpoints.csv
+*_osmlines.json
 rosm.cache
 testmatch.pdf
 .ipynb_checkpoints
