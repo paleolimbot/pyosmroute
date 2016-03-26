@@ -24,7 +24,7 @@ def get_planet_db(db_host=None, db_user=None, db_password=None, db_name=None):
         return PlanetDB(db_host, db_user, db_password, db_name)
 
 
-def on_road_percent(db, gpsdf, radius=15, latitude_column="Latitude", longitude_column="Longitude"):
+def on_road(db, gpsdf, radius=15, latitude_column="Latitude", longitude_column="Longitude"):
     """
     Calculate a percentage of points within the given radius of an OSM road segment.
 
@@ -35,7 +35,7 @@ def on_road_percent(db, gpsdf, radius=15, latitude_column="Latitude", longitude_
     :param longitude_column: The column identifier referring to the longitude column.
     :return: A float between 0 and 1.
     """
-    res = np.array([mapmatch.nearest_road(db, (gpsdf[longitude_column][i], gpsdf[latitude_column][i]),
-                                          radius=radius) is not None
+    res = np.array([mapmatch.nearest_road(db, radius,
+                                          (gpsdf[longitude_column][i], gpsdf[latitude_column][i])) is not None
                     for i in range(len(gpsdf))])
-    return res.sum() / len(gpsdf)
+    return res
