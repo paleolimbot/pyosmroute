@@ -249,7 +249,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
         summary = DataFrame()
 
     if segments_summary:
-        tripsummary = _segment_summary(cache, pathsegs, nodes)
+        tripsummary = _segment_summary(cache, gpspoints, pathsegs, nodes)
         _summary_statistics(tripsummary, output=stats, segment_distance=(np.sum, "distance"))
     else:
         tripsummary = DataFrame()
@@ -270,6 +270,26 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
         (len(cleaned), telapsed, len(cleaned) / telapsed, summarytime))
     return stats, summary, tripsummary
 
+
+def make_linestring(segsoutput):
+    """
+    Make a dict of the linestring represented by the segments output (useful for passing to json to
+    create a mappable version of this in some JS mapping api).
+
+    :param segsoutput: Output as created by osmmatch()
+    :return: A dict with elements "lon" and "lat"
+    """
+
+    # remove ambiguous direction strings
+    segsoutput = segsoutput.iloc[segsoutput["direction"] != 0, :]
+    lon = []
+    lat = []
+    lon.append(segsoutput["p1_lon"][0])
+    lat.append(segsoutput["p1_lat"][0])
+    for i in range(len(segsoutput)):
+        lon.append(segsoutput["p2_lon"][i])
+        lat.append(segsoutput["p2_lat"][i])
+    return {"lon": lon, "lat": lat}
 
 def _points_summary(cache, gpspoints, pathsegs):
 
@@ -298,7 +318,7 @@ def _points_summary(cache, gpspoints, pathsegs):
     return summary
 
 
-def _segment_summary(cache, pathsegs, nodes):
+def _segment_summary(cache, gpspoints, pathsegs, nodes):
     # generate trip summary (just the route, nothing to do with points)
     allsegs = []
     for t, d in enumerate(pathsegs):
@@ -316,44 +336,57 @@ def _segment_summary(cache, pathsegs, nodes):
     keys = ("wayid", "segment", "node1", "node2", "typetag", "name", "distance", "bearing",
             "p1", "p2")
     tripsummary = DataFrame.from_dict_list(allsegs, keys=keys)
+
+    # go through tripsummary and calculate direction and assign nodetags
+    direction = []
+    nodetags = []
+
+    for i in range(len(tripsummary)):
+        nextrow = tripsummary.iloc[i+1] if i+1 < len(tripsummary) else None
+        row = tripsummary.iloc[i]
+        prevrow = tripsummary.iloc[i-1] if (i-1) > 0 else None
+        segdirections = set()
+        if nextrow and nextrow["wayid"] == row["wayid"]:
+            s1 = row["segment"]
+            s2 = nextrow["segment"]
+            segdirections.add( 0 if s2 == s1 else 1 if s2 > s1 else -1)
+        if prevrow and prevrow["wayid"] == row["wayid"]:
+            s1 = prevrow["segment"]
+            s2 = row["segment"]
+            segdirections.add(0 if s2 == s1 else 1 if s2 > s1 else -1)
+        if nextrow and row["node2"] in (nextrow["node1"], nextrow["node2"]):
+            segdirections.add(1)
+        if nextrow and row["node1"] in (nextrow["node1"], nextrow["node2"]):
+            segdirections.add(-1)
+        if prevrow and row["node2"] in (prevrow["node1"], prevrow["node2"]):
+            segdirections.add(-1)
+        if prevrow and row["node1"] in (prevrow["node1"], prevrow["node2"]):
+            segdirections.add(1)
+
+        if len(segdirections) == 1:
+            direction.append(segdirections.pop())
+        else:
+            direction.append(0)
+        
+        if direction[-1] > 0:
+            nodetags.append(cache.nodes[row["node2"]]["tags"])
+        elif direction[-1] < 0:
+            # switch node 1 and node 2 so that node 1 always comes first
+            tripsummary["node1"][i] = row["node2"]
+            tripsummary["node2"][i] = row["node1"]
+            p1 = tuple(row["p1"])
+            tripsummary["p1"][i] = row["p2"]
+            tripsummary["p2"][i] = p1
+            nodetags.append(cache.nodes[row["node1"]]["tags"])
+        else:
+            nodetags.append({})
+
+    tripsummary["direction"] = direction
     tripsummary["p1_lon"], tripsummary["p1_lat"] = zip(*tripsummary["p1"])
     tripsummary["p2_lon"], tripsummary["p2_lat"] = zip(*tripsummary["p2"])
     del tripsummary["p1"]
     del tripsummary["p2"]
 
-    # go through tripsummary and calculate direction and assign nodetags
-    direction = []
-    nodetags = []
-    for i in range(len(tripsummary)):
-        nextrow = tripsummary.iloc[i+1] if i+1 < len(tripsummary) else None
-        row = tripsummary.iloc[i]
-        prevrow = tripsummary.iloc[i-1] if i-1 < 0 else None
-        if nextrow and nextrow["wayid"] == row["wayid"]:
-            s1 = row["segment"]
-            s2 = nextrow["segment"]
-            direction.append(0 if s2 == s1 else 1 if s2 > s1 else -1)
-        elif prevrow and prevrow["wayid"] == row["wayid"]:
-            s1 = prevrow["segment"]
-            s2 = row["segment"]
-            direction.append(0 if s2 == s1 else 1 if s2 > s1 else -1)
-        elif nextrow and row["node2"] in (nextrow["node1"], nextrow["node2"]):
-            direction.append(1)
-        elif nextrow and row["node1"] in (nextrow["node1"], nextrow["node2"]):
-            direction.append(-1)
-        elif prevrow and row["node2"] in (prevrow["node1"], prevrow["node2"]):
-            direction.append(-1)
-        elif prevrow and row["node1"] in (prevrow["node1"], prevrow["node2"]):
-            direction.append(1)
-        else:
-            # somehow?
-            direction.append(0)
-
-        if direction[-1] > 0:
-            nodetags.append(cache.nodes[row["node2"]]["tags"])
-        else:
-            nodetags.append(cache.nodes[row["node1"]]["tags"])
-
-    tripsummary["direction"] = direction
 
     # flatten nodetags and waytags, much easier to do here than in R
     nodetags = DataFrame.from_dict_list(nodetags, "")
@@ -370,7 +403,9 @@ def _segment_summary(cache, pathsegs, nodes):
     tripsummary["wayid"] = tripsummary["wayid"].astype(int)
     tripsummary["segment"] = tripsummary["segment"].astype(int)
 
+    # subset to not include segments with multiple direction matches
     return tripsummary
+
 
 
 def _summary_statistics(df, output=None, **stats):

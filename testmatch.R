@@ -39,9 +39,10 @@ matchtrip <- function(csvfile, printoutput=FALSE, interpreter="python") {
   suppressWarnings(suppressMessages(
     prettymap({
       osm.plot(zoombbox(bbox(gpspoints), 0.9), project=F, stoponlargerequest = F)
-      points(gpspoints, pch=18, cex=0.5)
+      points(gpspoints, pch=18, cex=0.1)
       segments(segs$p1_lon, segs$p1_lat, segs$p2_lon, segs$p2_lat, col="blue", lwd=2)
-      points(out$pt_onseg_lon, out$pt_onseg_lat, col="red", cex=0.3)
+      lines(segs$p2_lon, segs$p2_lat, col="green", lwd=1.5)
+      points(out$pt_onseg_lon, out$pt_onseg_lat, col="red", cex=0.1)
     })
   ))
   
@@ -63,14 +64,14 @@ test <- function() {
   }
 }
 
-matchtrip("example-data/test/2016-03-02 17_39_46_Bus_Android.csv.csv")
+matchtrip("example-data/test/trip_3185f564-2259-4351-a6f7-c8b08bd5866e.csv")
 
 # check pypy
-matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
-          interpreter = "../pypy-5.0.0-linux64/bin/pypy")
+matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android_start.csv",
+          interpreter = "../../build/pypy-5.0.0-osx64/bin/pypy")
 
 matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
           interpreter = "python3")
 
-matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
+matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android_end.csv",
           interpreter = "python")
