@@ -245,6 +245,8 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     if points_summary:
         summary = _points_summary(cache, gpspoints, pathsegs)
         _summary_statistics(summary, output=stats, gps_distance=(np.nansum, "gps__distance"), mean_xte=(np.mean, "xte"))
+        dur_sec = (summary["gps__datetime"][len(summary)-1] - summary["gps__datetime"][0]).seconds
+        stats["trip_duration_min"] = dur_sec / 60.0
     else:
         summary = DataFrame()
 
@@ -290,6 +292,7 @@ def make_linestring(segsoutput):
         lon.append(segsoutput["p2_lon"][i])
         lat.append(segsoutput["p2_lat"][i])
     return {"lon": lon, "lat": lat}
+
 
 def _points_summary(cache, gpspoints, pathsegs):
 
@@ -404,8 +407,7 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
     tripsummary["segment"] = tripsummary["segment"].astype(int)
 
     # subset to not include segments with multiple direction matches
-    return tripsummary
-
+    return tripsummary.iloc[tripsummary["direction"] != 0, :]
 
 
 def _summary_statistics(df, output=None, **stats):
