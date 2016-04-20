@@ -344,32 +344,48 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
     direction = []
     nodetags = []
 
-    for i in range(len(tripsummary)):
+    i = 0
+    while i < len(tripsummary):
         nextrow = tripsummary.iloc[i+1] if i+1 < len(tripsummary) else None
         row = tripsummary.iloc[i]
         prevrow = tripsummary.iloc[i-1] if (i-1) > 0 else None
-        segdirections = set()
-        if nextrow and nextrow["wayid"] == row["wayid"]:
-            s1 = row["segment"]
-            s2 = nextrow["segment"]
-            segdirections.add( 0 if s2 == s1 else 1 if s2 > s1 else -1)
+        segdirections = []
+
         if prevrow and prevrow["wayid"] == row["wayid"]:
             s1 = prevrow["segment"]
             s2 = row["segment"]
-            segdirections.add(0 if s2 == s1 else 1 if s2 > s1 else -1)
-        if nextrow and row["node2"] in (nextrow["node1"], nextrow["node2"]):
-            segdirections.add(1)
-        if nextrow and row["node1"] in (nextrow["node1"], nextrow["node2"]):
-            segdirections.add(-1)
-        if prevrow and row["node2"] in (prevrow["node1"], prevrow["node2"]):
-            segdirections.add(-1)
-        if prevrow and row["node1"] in (prevrow["node1"], prevrow["node2"]):
-            segdirections.add(1)
+            # -direction[-1] catches out and back situation with newly inserted row
+            segdirections.append(-direction[-1] if s2 == s1 else 1 if s2 > s1 else -1)
+        elif prevrow and row["node2"] in (prevrow["node1"], prevrow["node2"]):
+            segdirections.append(-1)
+        elif prevrow and row["node1"] in (prevrow["node1"], prevrow["node2"]):
+            segdirections.append(1)
 
-        if len(segdirections) == 1:
-            direction.append(segdirections.pop())
+        if nextrow and nextrow["wayid"] == row["wayid"]:
+            s1 = row["segment"]
+            s2 = nextrow["segment"]
+            # here s2 == s1 should never happen
+            assert s2 != s1
+            val = 0 if s2 == s1 else 1 if s2 > s1 else -1
+            if val not in segdirections:
+                segdirections.append(val)
+        elif nextrow and row["node2"] in (nextrow["node1"], nextrow["node2"]):
+            if 1 not in segdirections:
+                segdirections.append(1)
+        elif nextrow and row["node1"] in (nextrow["node1"], nextrow["node2"]):
+            if -1 not in segdirections:
+                segdirections.append(-1)
+
+        if len(segdirections) > 0:
+            direction.append(segdirections[0])
         else:
             direction.append(0)
+
+        # this is intended to catch an 'out and back' scenario
+        # insert a row in segments that is the same as this row
+        # the prevrow test with equal wayids should catch this and reverse direction
+        if len(segdirections) > 1:
+            tripsummary.insert(i+1, *row)
         
         if direction[-1] > 0:
             nodetags.append(cache.nodes[row["node2"]]["tags"])
@@ -384,12 +400,13 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
         else:
             nodetags.append({})
 
+        i += 1
+
     tripsummary["direction"] = direction
     tripsummary["p1_lon"], tripsummary["p1_lat"] = zip(*tripsummary["p1"])
     tripsummary["p2_lon"], tripsummary["p2_lat"] = zip(*tripsummary["p2"])
     del tripsummary["p1"]
     del tripsummary["p2"]
-
 
     # flatten nodetags and waytags, much easier to do here than in R
     nodetags = DataFrame.from_dict_list(nodetags, "")
