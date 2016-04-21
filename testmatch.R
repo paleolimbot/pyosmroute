@@ -26,7 +26,7 @@ matchtrip <- function(csvfile, printoutput=FALSE, interpreter="python") {
   }
   segs <- read.csv(outfile)
   out <- read.csv(pointsfile)
-  linesjson <- data.frame(rjson::fromJSON(file=linesfile))
+  linesjson <- lapply(rjson::fromJSON(file=linesfile), data.frame)
   
   unlink(outfile)
   unlink(pointsfile)
@@ -44,7 +44,9 @@ matchtrip <- function(csvfile, printoutput=FALSE, interpreter="python") {
       osm.plot(zoombbox(bbox(gpspoints), 0.9), project=F, stoponlargerequest = F)
       points(gpspoints, pch=18, cex=0.5)
       segments(segs$p1_lon, segs$p1_lat, segs$p2_lon, segs$p2_lat, col="blue", lwd=2)
-      lines(linesjson$lon, linesjson$lat, col="green", lwd=1.5)
+      for(l in linesjson) {
+        lines(l$lon, l$lat, col="green", lwd=1.5)
+      }
       points(out$pt_onseg_lon, out$pt_onseg_lat, col="red", cex=0.1)
     }, title = basename(csvfile))
   ))

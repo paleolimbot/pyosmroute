@@ -203,13 +203,13 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
         raise ValueError("path or tpdict somehow not assigned in transition probability loop")
 
     pathsegs = [states[t][result[0]] for t, result in enumerate(path) if result[1]]
-    nodes = [[], ]
+    nodes = [None, ]
     breaks = []
     for t in range(1, len(path)):
         if path[t][1] and path[t - 1][1]:  # need both t and t-1 to have a segment result
             nodes.append(tpdict.getdata(t - 1, path[t - 1][0], path[t][0]))
         elif path[t][1]:
-            nodes.append([])  # and don't append at all if not path[t]
+            nodes.append(None)  # and don't append at all if not path[t]
         else:
             breaks.append(t)
 
@@ -279,19 +279,42 @@ def make_linestring(segsoutput):
     create a mappable version of this in some JS mapping api).
 
     :param segsoutput: Output as created by osmmatch()
-    :return: A dict with elements "lon" and "lat"
+    :return: A list of dicts with elements "lon" and "lat"
     """
-
-    # remove ambiguous direction strings
-    segsoutput = segsoutput.iloc[segsoutput["direction"] != 0, :]
+    out = []
     lon = []
     lat = []
-    lon.append(segsoutput["p1_lon"][0])
-    lat.append(segsoutput["p1_lat"][0])
+
+    # loop through segs output testing for breaks. beginning of breaks use the
+    # pt_onseg as the beginning point and p2 as the end point. end of breaks use
+    # pt_onseg as
     for i in range(len(segsoutput)):
-        lon.append(segsoutput["p2_lon"][i])
-        lat.append(segsoutput["p2_lat"][i])
-    return {"lon": lon, "lat": lat}
+        row = segsoutput.iloc[i]
+        nextrow = segsoutput.iloc[i+1] if i+1 < len(segsoutput) else None
+        if len(lat) == len(lon) == 0:
+            lon.append(row["pt_onseg_lon"])
+            lat.append(row["pt_onseg_lat"])
+
+        # test for break situation: next lat/lon pair doesn't match up
+        if (nextrow and nextrow["p1_lon"] != row["p2_lon"] and nextrow["p1_lat"] != row["p2_lat"] or
+              nextrow is None):
+            lon.append(row["pt_onseg_lon"])
+            lat.append(row["pt_onseg_lat"])
+            out.append({"lon": list(lon), "lat": list(lat)})
+            lat = []
+            lon = []
+        elif (nextrow["node1"] == row["node2"]) and (nextrow["node2"] == row["node1"]):
+            # out and back situation
+            lon.append(row["pt_onseg_lon"])
+            lat.append(row["pt_onseg_lat"])
+        else:
+            lon.append(row["p2_lon"])
+            lat.append(row["p2_lat"])
+
+    if not (len(lat) == len(lon) == 0):
+        out.append({"lon": list(lon), "lat": list(lat)})
+
+    return out
 
 
 def _points_summary(cache, gpspoints, pathsegs):
@@ -326,18 +349,30 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
     allsegs = []
     for t, d in enumerate(pathsegs):
         mnodes = nodes[t]
-        if len(mnodes) >= 2:
+        if mnodes is not None and len(mnodes) >= 2:
             missingsegs = [cache.routing[mnodes[i - 1]][mnodes[i]] for i in range(1, len(mnodes))]
             for seg in missingsegs:
                 allsegs.append(seg)
-        if len(mnodes) >= 1 or t == 0:
+
+        if (len(allsegs) > 0) and d["node1"] == allsegs[-1]["node1"] and d["node2"] == allsegs[-1]["node2"]:
+            # matched point was same segment (no missing nodes)
+            if "gps_indicies" not in allsegs[-1]:
+                allsegs[-1]["gps_indicies"] = []
+            allsegs[-1]["gps_indicies"].append(t)
+            if 0 not in allsegs[-1]["gps_indicies"]:
+                allsegs[-1]["pt_onseg"] = d["pt_onseg"]
+        elif mnodes is None:
+            d["gps_indicies"] = [t,]
+            allsegs.append(d)
+        elif len(mnodes) >= 1:
+            d["gps_indicies"] = [t,]
             allsegs.append(d)
         else:
-            # matched point was same segment (no missing nodes)
+            # start up after break, other reasons probably as well
             pass
 
     keys = ("wayid", "segment", "node1", "node2", "typetag", "name", "distance", "bearing",
-            "p1", "p2")
+            "p1", "p2", "pt_onseg", "gps_indicies")
     tripsummary = DataFrame.from_dict_list(allsegs, keys=keys)
 
     # go through tripsummary and calculate direction and assign nodetags
@@ -364,7 +399,6 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
         if nextrow and nextrow["wayid"] == row["wayid"]:
             s1 = row["segment"]
             s2 = nextrow["segment"]
-            # here s2 == s1 should never happen
             assert s2 != s1
             val = 0 if s2 == s1 else 1 if s2 > s1 else -1
             if val not in segdirections:
@@ -380,6 +414,9 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
             direction.append(segdirections[0])
         else:
             direction.append(0)
+
+        # figure out which pt_onseg is applicable (may be first or last or middle
+
 
         # this is intended to catch an 'out and back' scenario
         # insert a row in segments that is the same as this row
@@ -405,8 +442,11 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
     tripsummary["direction"] = direction
     tripsummary["p1_lon"], tripsummary["p1_lat"] = zip(*tripsummary["p1"])
     tripsummary["p2_lon"], tripsummary["p2_lat"] = zip(*tripsummary["p2"])
+    tripsummary["pt_onseg_lon"], tripsummary["pt_onseg_lat"] = \
+        zip(*[p if type(p) == tuple else (float("nan"), float("nan")) for p in tripsummary["pt_onseg"]])
     del tripsummary["p1"]
     del tripsummary["p2"]
+    del tripsummary["pt_onseg"]
 
     # flatten nodetags and waytags, much easier to do here than in R
     nodetags = DataFrame.from_dict_list(nodetags, "")
