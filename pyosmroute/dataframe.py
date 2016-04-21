@@ -242,6 +242,42 @@ class DataFrame(object):
             raise KeyError("No such column: %s" % item)
         return self.__dict__[key]
 
+    def insert(self, index, *args, **kwargs):
+        """
+        Insert a row into the data frame. Must have same number of cols as the DataFrame. Technically
+        more than one value can be inserted at a time, but this works poorly if multidimentional types
+        are to be appended (e.g. tuple objects).
+
+        :param args: A list of values added by column name.
+        :param kwargs: Values to be added by column name.
+        """
+
+        if (len(args) + len(kwargs)) != self.ncol():
+            raise ValueError("Dimension mismatch: %s cols found and %s expected" % (len(args)+len(kwargs), self.ncol()))
+        newrows = None
+
+        # check input (just warning for now because lists are added sometimes in dbinterface)
+        lengths = [_len(arg) for arg in args] + [_len(value) for value in kwargs.values()]
+        newrows = min(lengths)
+
+        # going to use
+        for i in range(len(args)):
+            key = self.__internal_key(i)
+            if key is None:
+                raise KeyError("No such column: ", i)
+            try:  # this is to maintain pypy numpy compatibility, or ValueError is raised when tuples are the elements
+                self.__dict__[key] = np.array(list(self[key][:index]) + [args[i],] + list(self[key][index:]))
+            except ValueError:
+                self.__dict__[key] = list(self[key][:index]) + [args[i],] + list(self[key][index:])
+        for key, value in kwargs.items():
+            if key not in self:
+                raise KeyError("No such column: ", key)
+            try:  # this is to maintain pypy numpy compatibility, or ValueError is raised when tuples are the elements
+                self.__dict__[key] = np.array(list(self[key][:index]) + [value,] + list(self[key][index:]))
+            except ValueError:
+                self.__dict__[key] = list(self[key][:index]) + [value,] + list(self[key][index:])
+        self.__rows += newrows
+
     def append(self, *args, **kwargs):
         """
         Append a row to the data frame. Must have same number of cols as the DataFrame. Technically

@@ -18,10 +18,10 @@ def _coorditer(numpyarray):
 def _unravel_index(k, shape):
     # pypy does not implement np.unravel_index(index, shape)
     if len(shape) == 1:
-        return (k,)
+        return int(k)
     elif len(shape) == 2:
         ncol = shape[1]
-        return k/ncol, k%ncol
+        return int(k/ncol), int(k%ncol)
     else:
         raise NotImplementedError("Custom _unravel_index not available for shape > 2 dimensions")
 
@@ -83,7 +83,7 @@ class HiddenMarkovModel(object):
             else:
                 # minind = np.unravel_index(probs.argmax(), probs.shape)
                 minind = _unravel_index(probs.argmax(), probs.shape)
-                path.append((int(minind[0]), probs[minind]))
+                path.append((int(minind[0]) if type(minind) != int else minind, probs[minind]))
 
         return path
 
