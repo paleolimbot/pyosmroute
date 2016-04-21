@@ -298,15 +298,17 @@ def make_linestring(segsoutput):
         # test for break situation: next lat/lon pair doesn't match up
         if (nextrow and nextrow["p1_lon"] != row["p2_lon"] and nextrow["p1_lat"] != row["p2_lat"] or
               nextrow is None):
-            lon.append(row["pt_onseg_lon"])
-            lat.append(row["pt_onseg_lat"])
+            if not (np.isnan(row["pt_onseg_lon"]) or np.isnan(row["pt_onseg_lon"])):
+                lon.append(row["pt_onseg_lon"])
+                lat.append(row["pt_onseg_lat"])
             out.append({"lon": list(lon), "lat": list(lat)})
             lat = []
             lon = []
         elif (nextrow["node1"] == row["node2"]) and (nextrow["node2"] == row["node1"]):
             # out and back situation
-            lon.append(row["pt_onseg_lon"])
-            lat.append(row["pt_onseg_lat"])
+            if not (np.isnan(row["pt_onseg_lon"]) or np.isnan(row["pt_onseg_lon"])):
+                lon.append(row["pt_onseg_lon"])
+                lat.append(row["pt_onseg_lat"])
         else:
             lon.append(row["p2_lon"])
             lat.append(row["p2_lat"])
