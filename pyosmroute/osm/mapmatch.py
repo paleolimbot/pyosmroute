@@ -129,7 +129,7 @@ def osmmatch(db, gpsdf, lat_column="Latitude", lon_column="Longitude", unparsed_
     ways = list(tp.imap(db.nearest_ways, cleaned["Longitude"], cleaned["Latitude"],
                         np.repeat(searchradius, len(gpspoints))))
 
-    #ways = [db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius) for p in gpspoints]
+    # ways = [db.nearest_ways(p["Longitude"], p["Latitude"], radius=searchradius) for p in gpspoints]
     t_fetchways = time.time()
 
     log("Building in-memory cache...")
@@ -291,7 +291,7 @@ def make_linestring(segsoutput):
     for i in range(len(segsoutput)):
         row = segsoutput.iloc[i]
         nextrow = segsoutput.iloc[i+1] if i+1 < len(segsoutput) else None
-        if len(lat) == len(lon) == 0:
+        if (len(lat) == len(lon) == 0) and not (np.isnan(row["pt_onseg_lon"]) or np.isnan(row["pt_onseg_lon"])):
             lon.append(row["pt_onseg_lon"])
             lat.append(row["pt_onseg_lat"])
 
@@ -352,6 +352,7 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
         if mnodes is not None and len(mnodes) >= 2:
             missingsegs = [cache.routing[mnodes[i - 1]][mnodes[i]] for i in range(1, len(mnodes))]
             for seg in missingsegs:
+                seg["gps_indicies"] = []
                 allsegs.append(seg)
 
         if (len(allsegs) > 0) and d["node1"] == allsegs[-1]["node1"] and d["node2"] == allsegs[-1]["node2"]:
@@ -415,15 +416,16 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
         else:
             direction.append(0)
 
-        # figure out which pt_onseg is applicable (may be first or last or middle
-
-
         # this is intended to catch an 'out and back' scenario
         # insert a row in segments that is the same as this row
         # the prevrow test with equal wayids should catch this and reverse direction
         if len(segdirections) > 1:
+            # pick a pt_onseg that is relevant (largest distance from node1)
+            alongtrack = np.array([pathsegs[j]["alongtrack"] for j in row["gps_indicies"]])
+            ind = np.argmin(alongtrack) if direction[-1] < 0 else np.argmax(alongtrack)
+            tripsummary["pt_onseg"][i] = pathsegs[row["gps_indicies"][ind]]["pt_onseg"]
             tripsummary.insert(i+1, *row)
-        
+
         if direction[-1] > 0:
             nodetags.append(cache.nodes[row["node2"]]["tags"])
         elif direction[-1] < 0:
