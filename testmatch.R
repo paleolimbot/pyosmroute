@@ -70,13 +70,13 @@ test <- function() {
 }
 
 # latest funky matches
-matchtrip("example-data/test/allan-huawei_191802.csv") # breaks
+matchtrip("example-data/test/allan-huawei_191802.csv") 
 matchtrip("example-data/test/allan-samsung_423901.csv")
-matchtrip("example-data/test/dr@zensur.io_355953.csv") # out/ back issue remains
-matchtrip("example-data/test/dr@zensur.io_463534.csv") # out/ back issue remains
+matchtrip("example-data/test/dr@zensur.io_355953.csv") 
+matchtrip("example-data/test/dr@zensur.io_463534.csv") 
 matchtrip("example-data/test/dr@zensur.io_463617.csv")
 matchtrip("example-data/test/dr@zensur.io_774319.csv")
-matchtrip("example-data/test/dr@zensur.io_959184.csv") # out/ back issue remains
+matchtrip("example-data/test/dr@zensur.io_959184.csv") 
 
 matchtrip("example-data/test/2016-03-02 18_03_07_Car - Normal Drive_Android.csv") # endpoints
 matchtrip("example-data/test/trip_3185f564-2259-4351-a6f7-c8b08bd5866e.csv") # out/back, endpoints
