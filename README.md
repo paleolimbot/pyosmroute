@@ -36,7 +36,7 @@ It's possible to use the `matchcsv.py` file (in this folder) from the command li
 dewey >> python matchcsv.py --help
 usage: Run route matching on CSVs containing date/time, latitude, and longitude information.
        [-h] [-r] [-o OUTPUT] [--outcols [OUTCOLS [OUTCOLS ...]]]
-       [--writepoints] [--writesegs] [--processes PROCESSES]
+       [--writepoints] [--writesegs] [--writelines] [--processes PROCESSES]
        [--chunksize CHUNKSIZE] [-v] [--matchargs MATCHARGS] [-n N]
        infile
 
@@ -54,6 +54,7 @@ optional arguments:
                         Specify which summary columns to write.
   --writepoints         Write point matches to FILE_osmpoints.csv
   --writesegs           Write all segment matches to FILE_osmsegs.csv
+  --writelines          Write all segment matches to FILE_osmlines.json
   --processes PROCESSES
                         Specify number of worker processes.
   --chunksize CHUNKSIZE
@@ -361,6 +362,10 @@ stats, points, segs = pyosm.osmmatch(planetdb, gpsdata)
 stats
 ```
 
+    /Users/dewey/d/zensurio/pyosmroute/pyosmroute/osm/_hiddenmarkovmodel.py:86: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
+      path.append((int(minind[0]), probs[minind]))
+
+
 
 
 
@@ -371,16 +376,17 @@ stats
      'matched_proportion': 1.0,
      'mean_xte': 3.8960529214450101,
      'result': 'ok',
-     'segment_distance': 1014.4255969189038,
-     'started': '2016-03-26 21:29:47 +0000',
-     't_cache': 0.0282289981842041,
-     't_cleaned': 0.013720989227294922,
-     't_eprobs': 0.011605978012084961,
-     't_fetchways': 0.01865100860595703,
-     't_hmm': 0.01732492446899414,
-     't_summary': 0.009721040725708008,
-     't_total': 0.09604692459106445,
-     't_velocity_direction': 0.006515026092529297}
+     'segment_distance': 1017.1652743409202,
+     'started': '2016-04-21 20:00:25 +0000',
+     't_cache': 0.03412508964538574,
+     't_cleaned': 0.012423038482666016,
+     't_eprobs': 0.013159990310668945,
+     't_fetchways': 0.02208089828491211,
+     't_hmm': 0.02213597297668457,
+     't_summary': 0.01111292839050293,
+     't_total': 0.1100001335144043,
+     't_velocity_direction': 0.006075143814086914,
+     'trip_duration_min': 3.0}
 
 
 
@@ -438,6 +444,10 @@ The `segs` output is similar, but contains a complete list of the segments that 
 
 **nodetag...**: Similar to waytag, but refers to the tags of **node2**. Signals, if in the OSM database, would be referred to here.
 
+**points_indicies**: Which rows from the `points` output are contained within the segment.
+
+**pt_onseg**: This output is mostly for internal use in the `make_linestring()` function, but contains a lat/lon pair that lies on the segment.
+
 
 ```python
 segs.head()
@@ -446,17 +456,17 @@ segs.head()
 
 
 
-<table><tr><td><strong>wayid</strong></td><td><strong>segment</strong></td><td><strong>node1</strong></td><td><strong>node2</strong></td><td><strong>typetag</strong></td><td><strong>name</strong></td><td><strong>distance</strong></td><td><strong>bearing</strong></td><td><strong>direction</strong></td><td><strong>p1_lon</strong></td><td><strong>p1_lat</strong></td><td><strong>p2_lon</strong></td><td><strong>p2_lat</strong></td><td><strong>waytag_highway</strong></td><td><strong>waytag_lanes</strong></td><td><strong>waytag_name</strong></td><td><strong>waytag_source</strong></td><td><strong>waytag_surface</strong></td></tr>
-<tr><td>357012198</td><td>20</td><td>3624069719</td><td>3624069724</td><td>unclassified</td><td>None</td><td>3.19573724588</td><td>74.6450683853</td><td>1</td><td>-64.3697307537</td><td>45.091637562</td><td>-64.3696914973</td><td>45.0916451723</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
-<tr><td>357012198</td><td>21</td><td>3624069724</td><td>3624069728</td><td>unclassified</td><td>None</td><td>3.17269358001</td><td>76.2417253711</td><td>1</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3696522409</td><td>45.0916519581</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
-<tr><td>357012198</td><td>22</td><td>3624069728</td><td>3624069731</td><td>unclassified</td><td>None</td><td>3.19949996964</td><td>74.4015177491</td><td>1</td><td>-64.3696522409</td><td>45.0916519581</td><td>-64.3696129845</td><td>45.0916596952</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
-<tr><td>357012198</td><td>23</td><td>3624069731</td><td>3624069735</td><td>unclassified</td><td>None</td><td>3.18893641931</td><td>74.6115182813</td><td>1</td><td>-64.3696129845</td><td>45.0916596952</td><td>-64.369573818</td><td>45.0916673055</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
-<tr><td>357012198</td><td>24</td><td>3624069735</td><td>3624069740</td><td>unclassified</td><td>None</td><td>3.1908145295</td><td>74.4894314829</td><td>1</td><td>-64.369573818</td><td>45.0916673055</td><td>-64.3695346515</td><td>45.0916749791</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
-<tr><td>357012198</td><td>25</td><td>3624069740</td><td>3624069743</td><td>unclassified</td><td>None</td><td>3.32184257533</td><td>73.2191898948</td><td>1</td><td>-64.3695346515</td><td>45.0916749791</td><td>-64.3694941374</td><td>45.0916836041</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr></table>
+<table><tr><td><strong>wayid</strong></td><td><strong>segment</strong></td><td><strong>node1</strong></td><td><strong>node2</strong></td><td><strong>typetag</strong></td><td><strong>name</strong></td><td><strong>distance</strong></td><td><strong>bearing</strong></td><td><strong>points_indicies</strong></td><td><strong>direction</strong></td><td><strong>p1_lon</strong></td><td><strong>p1_lat</strong></td><td><strong>p2_lon</strong></td><td><strong>p2_lat</strong></td><td><strong>pt_onseg_lon</strong></td><td><strong>pt_onseg_lat</strong></td><td><strong>waytag_highway</strong></td><td><strong>waytag_lanes</strong></td><td><strong>waytag_name</strong></td><td><strong>waytag_source</strong></td><td><strong>waytag_surface</strong></td></tr>
+<tr><td>357012198</td><td>20</td><td>3624069719</td><td>3624069724</td><td>unclassified</td><td>None</td><td>3.19573724588</td><td>74.6450683853</td><td>[0]</td><td>1</td><td>-64.3697307537</td><td>45.091637562</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3697032554</td><td>45.0916428929</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
+<tr><td>357012198</td><td>21</td><td>3624069724</td><td>3624069728</td><td>unclassified</td><td>None</td><td>3.17269358001</td><td>76.2417253711</td><td>[]</td><td>1</td><td>-64.3696914973</td><td>45.0916451723</td><td>-64.3696522409</td><td>45.0916519581</td><td>nan</td><td>nan</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
+<tr><td>357012198</td><td>22</td><td>3624069728</td><td>3624069731</td><td>unclassified</td><td>None</td><td>3.19949996964</td><td>74.4015177491</td><td>[]</td><td>1</td><td>-64.3696522409</td><td>45.0916519581</td><td>-64.3696129845</td><td>45.0916596952</td><td>nan</td><td>nan</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
+<tr><td>357012198</td><td>23</td><td>3624069731</td><td>3624069735</td><td>unclassified</td><td>None</td><td>3.18893641931</td><td>74.6115182813</td><td>[]</td><td>1</td><td>-64.3696129845</td><td>45.0916596952</td><td>-64.369573818</td><td>45.0916673055</td><td>nan</td><td>nan</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
+<tr><td>357012198</td><td>24</td><td>3624069735</td><td>3624069740</td><td>unclassified</td><td>None</td><td>3.1908145295</td><td>74.4894314829</td><td>[]</td><td>1</td><td>-64.369573818</td><td>45.0916673055</td><td>-64.3695346515</td><td>45.0916749791</td><td>nan</td><td>nan</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr>
+<tr><td>357012198</td><td>25</td><td>3624069740</td><td>3624069743</td><td>unclassified</td><td>None</td><td>3.32184257533</td><td>73.2191898948</td><td>[]</td><td>1</td><td>-64.3695346515</td><td>45.0916749791</td><td>-64.3694941374</td><td>45.0916836041</td><td>nan</td><td>nan</td><td>unclassified</td><td>2</td><td></td><td>NRCan-CanVec-10.0</td><td>paved</td></tr></table>
 
 
 
-It may be that only a line string of the output is required, and this output can be obtained using the `make_linestring()` function, taking the `segs` output as its only argument.
+It may be that only a line string of the output is required, and this output can be obtained using the `make_linestring()` function, taking the `segs` output as its only argument. Note that the output produced is a *list* of objects. This is because there are breaks in the model that are best represented as breaks on the map (cleaner).
 
 
 ```python
@@ -466,18 +476,14 @@ pyosm.make_linestring(segs.iloc[1:6, :])
 
 
 
-    {'lat': [45.091645172293127,
-      45.091651958104322,
-      45.091659695196469,
-      45.091667305450038,
-      45.091674979121336,
-      45.091683604073012],
-     'lon': [-64.369691497304061,
-      -64.369652240926158,
-      -64.369612984548226,
-      -64.36957381800184,
-      -64.369534651455467,
-      -64.369494137436149]}
+    [{'lat': [45.091651958104322,
+       45.091659695196469,
+       45.091667305450038,
+       45.091674979121336],
+      'lon': [-64.369652240926158,
+       -64.369612984548226,
+       -64.36957381800184,
+       -64.369534651455467]}]
 
 
 
