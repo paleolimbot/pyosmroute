@@ -265,11 +265,17 @@ class DataFrame(object):
             key = self.__internal_key(i)
             if key is None:
                 raise KeyError("No such column: ", i)
-            self.__dict__[key] = np.array(list(self[key][:index]) + [args[i],] + list(self[key][index:]))
+            try:  # this is to maintain pypy numpy compatibility, or ValueError is raised when tuples are the elements
+                self.__dict__[key] = np.array(list(self[key][:index]) + [args[i],] + list(self[key][index:]))
+            except ValueError:
+                self.__dict__[key] = list(self[key][:index]) + [args[i],] + list(self[key][index:])
         for key, value in kwargs.items():
             if key not in self:
                 raise KeyError("No such column: ", key)
-            self.__dict__[key] = np.array(list(self[key][:index]) + [value,] + list(self[key][index:]))
+            try:  # this is to maintain pypy numpy compatibility, or ValueError is raised when tuples are the elements
+                self.__dict__[key] = np.array(list(self[key][:index]) + [value,] + list(self[key][index:]))
+            except ValueError:
+                self.__dict__[key] = list(self[key][:index]) + [value,] + list(self[key][index:])
         self.__rows += newrows
 
     def append(self, *args, **kwargs):

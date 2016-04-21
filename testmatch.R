@@ -82,7 +82,7 @@ matchtrip("example-data/test/2016-03-02 18_03_07_Car - Normal Drive_Android.csv"
 matchtrip("example-data/test/trip_3185f564-2259-4351-a6f7-c8b08bd5866e.csv") # out/back, endpoints
 
 # check pypy
-matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android_start.csv",
+matchtrip("example-data/test/allan-huawei_191802.csv",
           interpreter = "../../build/pypy-5.0.0-osx64/bin/pypy")
 
 matchtrip("example-data/test/2016-03-02 17_37_41_Car - Normal Drive_Android.csv",
