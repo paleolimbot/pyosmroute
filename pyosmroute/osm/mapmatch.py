@@ -468,7 +468,7 @@ def _segment_summary(cache, gpspoints, pathsegs, nodes):
     tripsummary["segment"] = tripsummary["segment"].astype(int)
 
     # subset to not include segments with multiple direction matches
-    return tripsummary.iloc[tripsummary["direction"] != 0, :]
+    return tripsummary
 
 
 def _summary_statistics(df, output=None, **stats):
